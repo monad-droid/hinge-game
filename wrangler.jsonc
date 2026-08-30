@@ -1,0 +1,37 @@
+{
+  // Debatable — Cloudflare Worker configuration.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "debatable",
+  "main": "worker/index.ts",
+  "compatibility_date": "2025-08-01",
+
+  // Static frontend (built by Vite into ./dist).
+  // /api/* always runs the Worker; everything else is served as a static
+  // asset, falling back to index.html for SPA routes like /g/XK42P.
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+
+  // Game storage. Create with: wrangler d1 create debatable-db
+  // then paste the database_id it prints here.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "debatable-db",
+      "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+    }
+  ],
+
+  // Daily sweep that deletes expired games (expiry is also enforced
+  // per-request, so this is hygiene, not correctness).
+  "triggers": {
+    "crons": ["17 4 * * *"]
+  },
+
+  "observability": {
+    "enabled": true
+  }
+}

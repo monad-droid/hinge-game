@@ -1,0 +1,24 @@
+{
+  "name": "debatable",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "npm run build && wrangler dev",
+    "watch": "vite build --watch",
+    "build": "vite build",
+    "check": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p worker/tsconfig.json",
+    "db:local": "wrangler d1 execute debatable-db --local --file=./schema.sql",
+    "db:remote": "wrangler d1 execute debatable-db --remote --file=./schema.sql",
+    "deploy": "npm run build && wrangler deploy"
+  },
+  "dependencies": {
+    "hono": "^4.6.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260828.1",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0",
+    "wrangler": "^4.0.0"
+  }
+}
