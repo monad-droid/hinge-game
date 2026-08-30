@@ -316,9 +316,16 @@ h2:focus-visible {
   font-weight: 800;
 }
 
-.answer-btn:active {
+.answer-btn:active,
+.answer-btn.is-picked {
   background: var(--ink);
   color: var(--paper);
+  transform: translate(3px, 3px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
+.answer-btn:disabled {
+  cursor: default;
 }
 
 /* ————— prediction ————— */

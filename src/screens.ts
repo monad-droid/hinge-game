@@ -15,20 +15,6 @@ function displayUrl(code: string): string {
   return `${host}/g/${code}`;
 }
 
-async function shareGame(code: string): Promise<void> {
-  const url = gameUrl(code);
-  const text = `I need to know where you stand on these: ${url}`;
-  if (navigator.share) {
-    try {
-      await navigator.share({ text });
-      return;
-    } catch {
-      return; // user dismissed the sheet — not an error
-    }
-  }
-  await copyLink(code);
-}
-
 async function copyLink(code: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(gameUrl(code));
@@ -119,13 +105,12 @@ export function showShare(code: string, opts: { fresh: boolean; onReady: () => v
         ? h("h1", { class: "display" }, "Your answers are locked.")
         : h("h1", { class: "display" }, "Still waiting."),
       opts.fresh
-        ? h("p", { class: "sub" }, "Now send this to someone with questionable opinions.")
+        ? h("p", { class: "sub" }, "Now send this to someone to see how you compare.")
         : h("p", { class: "sub" }, "Typical."),
       h(
         "div",
         { class: "stack mt" },
-        h("button", { class: "btn btn-primary", onclick: () => void shareGame(code) }, "Send Debatable"),
-        h("button", { class: "btn", onclick: () => void copyLink(code) }, "Copy link"),
+        h("button", { class: "btn btn-primary", onclick: () => void copyLink(code) }, "Copy link"),
         h("p", { class: "sharelink" }, displayUrl(code)),
         h("p", { class: "fine", style: "text-align:center" }, "They won't see your answers until they've picked theirs.")
       )
@@ -257,4 +242,3 @@ export function showNetworkError(onRetry: () => void): void {
   ]);
 }
 
-export { copyLink, shareGame };

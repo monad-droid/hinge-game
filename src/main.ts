@@ -164,5 +164,9 @@ function handleTerminal(e: unknown, code: string): void {
   showNetworkError(() => void enterGame(code));
 }
 
+// An (empty) touchstart listener makes mobile Safari apply :active styles
+// on touch, so every button gets press feedback, not just the answers.
+document.addEventListener("touchstart", () => {}, { passive: true });
+
 window.addEventListener("popstate", route);
 route();

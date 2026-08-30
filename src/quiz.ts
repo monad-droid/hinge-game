@@ -31,18 +31,30 @@ function showQuestion(opts: QuizOptions, answers: Answer[]): void {
   const index = answers.length;
   const question = opts.pack.questions[index]!;
 
-  const pick = (choice: Answer) => {
+  // Flash the chosen button and hold for a beat before advancing — mobile
+  // Safari doesn't reliably show :active on touch, and an instant screen
+  // swap would hide the feedback anyway.
+  const pick = (choice: Answer, event: Event) => {
+    const pressed = event.currentTarget as HTMLButtonElement;
+    for (const b of Array.from(document.querySelectorAll<HTMLButtonElement>(".answer-btn"))) {
+      b.disabled = true; // no double-taps while the flash plays
+    }
+    pressed.classList.add("is-picked");
+
     const next = [...answers, choice];
     setDraft(opts.draftKey, { answers: next });
-    if (next.length >= QUESTIONS_PER_GAME) {
-      if (ENABLE_PREDICTIONS) {
-        showPrediction(opts, next);
+
+    window.setTimeout(() => {
+      if (next.length >= QUESTIONS_PER_GAME) {
+        if (ENABLE_PREDICTIONS) {
+          showPrediction(opts, next);
+        } else {
+          void submit(opts, next, null, () => showQuestion(opts, answers));
+        }
       } else {
-        void submit(opts, next, null, () => showQuestion(opts, answers));
+        showQuestion(opts, next);
       }
-    } else {
-      showQuestion(opts, next);
-    }
+    }, 170);
   };
 
   mount(
@@ -76,8 +88,8 @@ function showQuestion(opts: QuizOptions, answers: Answer[]): void {
       h(
         "div",
         { class: "answers" },
-        h("button", { class: "btn answer-btn", onclick: () => pick(0) }, question.choices[0]),
-        h("button", { class: "btn answer-btn", onclick: () => pick(1) }, question.choices[1])
+        h("button", { class: "btn answer-btn", onclick: (e: Event) => pick(0, e) }, question.choices[0]),
+        h("button", { class: "btn answer-btn", onclick: (e: Event) => pick(1, e) }, question.choices[1])
       )
     )
   );
