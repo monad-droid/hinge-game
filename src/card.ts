@@ -41,7 +41,32 @@ function wrapText(
   return cursorY + lineHeight;
 }
 
-export async function downloadCardPng(data: CardData): Promise<void> {
+// Saving: on phones we hand the PNG to the native share sheet (so iOS offers
+// "Save Image" → Photos, AirDrop, Messages…); desktop browsers without
+// file-sharing fall back to a plain download.
+export async function saveCardImage(data: CardData): Promise<void> {
+  const blob = await renderCardPng(data);
+  const file = new File([blob], "debatable.png", { type: "image/png" });
+
+  if (typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file] });
+      return;
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return; // user closed the sheet
+      // Anything else (lost user-gesture, share refused) → download instead.
+    }
+  }
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "debatable.png";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+async function renderCardPng(data: CardData): Promise<Blob> {
   // Make sure the display face is ready before drawing with it.
   try {
     await Promise.all([
@@ -114,12 +139,7 @@ export async function downloadCardPng(data: CardData): Promise<void> {
 
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
   if (!blob) throw new Error("toBlob failed");
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "debatable.png";
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  return blob;
 }
 
 // Canvas has no letter-spacing; fake it per character.

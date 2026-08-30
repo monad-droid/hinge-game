@@ -7,7 +7,7 @@ import { getPack } from "../shared/packs";
 import type { Pack, Question } from "../shared/packs";
 import { pickVerdict, predictionReaction } from "../shared/verdicts";
 import type { RevealResponse } from "../shared/types";
-import { downloadCardPng } from "./card";
+import { saveCardImage } from "./card";
 import { h, mount, toast, wordmark } from "./ui";
 
 const DISPUTE_FLAVOR = [
@@ -296,13 +296,13 @@ function showShareCard(ctx: RevealContext): void {
           {
             class: "btn btn-primary",
             onclick: () =>
-              void downloadCardPng({
+              void saveCardImage({
                 score: ctx.data.score,
                 verdict: ctx.verdict,
                 disputeTopic: dispute ? dispute.topic : null,
               }).catch(() => toast("Couldn't render the image. Screenshot works.")),
           },
-          "Download image"
+          "Save image"
         ),
         h("button", { class: "btn-ghost btn", onclick: () => showFinal(ctx) }, "Back")
       )
