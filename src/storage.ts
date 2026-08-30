@@ -40,15 +40,22 @@ export function setRole(code: string, role: Role): void {
   write(`role.${code}`, role);
 }
 
-// In-progress answers, so a refresh doesn't erase progress.
+// In-progress answers, so a refresh doesn't erase progress. `flappy` is set
+// once the tiebreaker has been played (a score) or skipped (null); absent
+// means not yet offered — that's what makes it one attempt per side.
 export interface Draft {
   answers: Answer[];
+  flappy?: number | null;
 }
 
 export function getDraft(key: string): Draft | null {
   const draft = read<Draft>(`draft.${key}`);
   if (!draft || !Array.isArray(draft.answers)) return null;
-  return { answers: draft.answers.filter((a): a is Answer => a === 0 || a === 1) };
+  const clean: Draft = {
+    answers: draft.answers.filter((a): a is Answer => a === 0 || a === 1),
+  };
+  if (typeof draft.flappy === "number" || draft.flappy === null) clean.flappy = draft.flappy;
+  return clean;
 }
 
 export function setDraft(key: string, draft: Draft): void {

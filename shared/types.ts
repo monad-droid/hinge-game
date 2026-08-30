@@ -14,9 +14,11 @@ export interface GameStatus {
 }
 
 // POST /api/games — creates the game with Player 1's side already locked.
+// flappy is the tiebreaker score: a number, or null if skipped/disabled.
 export interface CreateGameRequest {
   answers: Answer[];
   prediction: number | null;
+  flappy: number | null;
 }
 
 export interface CreateGameResponse {
@@ -27,6 +29,7 @@ export interface CreateGameResponse {
 export interface SubmitP2Request {
   answers: Answer[];
   prediction: number | null;
+  flappy: number | null;
 }
 
 // GET /api/games/:code/reveal — only served once the game is COMPLETE.
@@ -41,6 +44,7 @@ export interface RevealResponse {
 export interface PlayerSide {
   answers: Answer[];
   prediction: number | null;
+  flappy: number | null;
 }
 
 export interface ApiError {

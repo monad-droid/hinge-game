@@ -39,10 +39,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  createGame(answers: Answer[], prediction: number | null): Promise<CreateGameResponse> {
+  createGame(answers: Answer[], prediction: number | null, flappy: number | null): Promise<CreateGameResponse> {
     return request("/api/games", {
       method: "POST",
-      body: JSON.stringify({ answers, prediction }),
+      body: JSON.stringify({ answers, prediction, flappy }),
     });
   },
 
@@ -50,10 +50,10 @@ export const api = {
     return request(`/api/games/${encodeURIComponent(code)}`);
   },
 
-  submitP2(code: string, answers: Answer[], prediction: number | null): Promise<{ ok: true }> {
+  submitP2(code: string, answers: Answer[], prediction: number | null, flappy: number | null): Promise<{ ok: true }> {
     return request(`/api/games/${encodeURIComponent(code)}/p2`, {
       method: "POST",
-      body: JSON.stringify({ answers, prediction }),
+      body: JSON.stringify({ answers, prediction, flappy }),
     });
   },
 

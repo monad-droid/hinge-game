@@ -2,28 +2,52 @@
 // prediction screen. Shared by Player 1 and Player 2 — only the completion
 // callback differs.
 
-import { ENABLE_PREDICTIONS, QUESTIONS_PER_GAME } from "../shared/config";
+import { ENABLE_MINIGAME, ENABLE_PREDICTIONS, QUESTIONS_PER_GAME } from "../shared/config";
 import type { Pack } from "../shared/packs";
 import { PREDICTION_FLAVOR } from "../shared/verdicts";
 import type { Answer } from "../shared/types";
+import { playFlappy } from "./flappy";
 import { clearDraft, getDraft, setDraft } from "./storage";
 import { h, mount, toast } from "./ui";
 
 export interface QuizOptions {
   pack: Pack;
   draftKey: string;
-  // Called once answers (and prediction, when enabled) are locked in by the
-  // player. Must submit to the server; throws propagate back to a retry UI.
-  onComplete: (answers: Answer[], prediction: number | null) => Promise<void>;
+  // Called once the whole side is locked in: answers, prediction (when
+  // enabled) and the tiebreaker score (null if skipped/disabled). Must
+  // submit to the server; throws propagate back to a retry UI.
+  onComplete: (answers: Answer[], prediction: number | null, flappy: number | null) => Promise<void>;
 }
 
 export function startQuiz(opts: QuizOptions): void {
   const draft = getDraft(opts.draftKey);
   const answers: Answer[] = draft ? draft.answers.slice(0, QUESTIONS_PER_GAME) : [];
   if (answers.length >= QUESTIONS_PER_GAME) {
-    showPrediction(opts, answers);
+    afterAnswers(opts, answers);
   } else {
     showQuestion(opts, answers);
+  }
+}
+
+// The steps between the last question and submission: tiebreaker (one
+// attempt — the draft remembers whether it's been played), then prediction.
+function afterAnswers(opts: QuizOptions, answers: Answer[]): void {
+  const draft = getDraft(opts.draftKey);
+  const flappy = draft?.flappy;
+  if (ENABLE_MINIGAME && flappy === undefined) {
+    playFlappy({
+      onDone: (score) => {
+        setDraft(opts.draftKey, { answers, flappy: score });
+        afterAnswers(opts, answers);
+      },
+    });
+    return;
+  }
+  const settled = flappy === undefined ? null : flappy;
+  if (ENABLE_PREDICTIONS) {
+    showPrediction(opts, answers, settled);
+  } else {
+    void submit(opts, answers, null, settled, () => afterAnswers(opts, answers));
   }
 }
 
@@ -46,11 +70,7 @@ function showQuestion(opts: QuizOptions, answers: Answer[]): void {
 
     window.setTimeout(() => {
       if (next.length >= QUESTIONS_PER_GAME) {
-        if (ENABLE_PREDICTIONS) {
-          showPrediction(opts, next);
-        } else {
-          void submit(opts, next, null, () => showQuestion(opts, answers));
-        }
+        afterAnswers(opts, next);
       } else {
         showQuestion(opts, next);
       }
@@ -101,7 +121,7 @@ function showQuestion(opts: QuizOptions, answers: Answer[]): void {
   });
 }
 
-function showPrediction(opts: QuizOptions, answers: Answer[]): void {
+function showPrediction(opts: QuizOptions, answers: Answer[], flappy: number | null): void {
   let selected: number | null = null;
 
   const flavor = h("p", { class: "tally-flavor", "aria-live": "polite" }, " ");
@@ -138,7 +158,7 @@ function showPrediction(opts: QuizOptions, answers: Answer[]): void {
     if (selected === null) return;
     lockBtn.setAttribute("disabled", "");
     lockBtn.textContent = "Locking…";
-    await submit(opts, answers, selected, () => showPrediction(opts, answers));
+    await submit(opts, answers, selected, flappy, () => showPrediction(opts, answers, flappy));
   };
 
   mount(
@@ -168,10 +188,11 @@ async function submit(
   opts: QuizOptions,
   answers: Answer[],
   prediction: number | null,
+  flappy: number | null,
   retryScreen: () => void
 ): Promise<void> {
   try {
-    await opts.onComplete(answers, prediction);
+    await opts.onComplete(answers, prediction, flappy);
     clearDraft(opts.draftKey);
   } catch {
     // Completion handlers throw only for retryable failures (network etc.);

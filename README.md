@@ -56,11 +56,14 @@ APP_NAME = "Debatable"
 PUBLIC_DOMAIN = "debatable.lol"
 GAME_EXPIRATION_DAYS = 30
 ENABLE_PREDICTIONS = true
+ENABLE_MINIGAME = true
 CURRENT_PACK_ID = "original"
 ```
 
 Set `ENABLE_PREDICTIONS = false` and the prediction screens and prediction
-reveal disappear cleanly (the API accepts and stores `null`).
+reveal disappear cleanly (the API accepts and stores `null`). Same for
+`ENABLE_MINIGAME = false`, which removes the flappy tiebreaker (one attempt
+after question 7, skippable; both scores compared in the reveal).
 
 No environment variables or secrets are required. The only per-account value
 is the D1 `database_id` in `wrangler.jsonc`.
@@ -94,6 +97,18 @@ npm run db:remote
 # 3. Build + deploy
 npm run deploy
 ```
+
+### Upgrading an existing database
+
+A database created before the flappy tiebreaker existed needs its two score
+columns added once:
+
+```bash
+npm run db:migrate:remote     # and db:migrate:local for local dev
+```
+
+Fresh databases get them from `schema.sql` and must not run the migration
+(it would fail on the already-present columns — harmlessly, but noisily).
 
 That's it — the Worker serves the app at `https://debatable.<your-subdomain>.workers.dev`.
 

@@ -6,6 +6,12 @@ export const PUBLIC_DOMAIN = "debatable.lol";
 export const GAME_EXPIRATION_DAYS = 30;
 export const ENABLE_PREDICTIONS = true;
 
+// The flappy tiebreaker after question 7: one attempt, skippable, both
+// scores compared in the reveal. Flip off to remove it from the flow
+// entirely (stored scores are simply ignored).
+export const ENABLE_MINIGAME = true;
+export const FLAPPY_MAX_SCORE = 9999;
+
 // The question pack new games are created from. Only one pack exists in v1;
 // pack selection UI is intentionally out of scope.
 export const CURRENT_PACK_ID = "original";

@@ -108,7 +108,7 @@ function showCard(ctx: RevealContext, index: number): void {
     } else if (hasPredictions(ctx)) {
       showPredictions(ctx);
     } else {
-      showFinal(ctx);
+      afterPredictions(ctx);
     }
   };
 
@@ -160,7 +160,13 @@ function showCard(ctx: RevealContext, index: number): void {
         h(
           "button",
           { class: "btn btn-primary", onclick: next },
-          isLast ? (hasPredictions(ctx) ? "The predictions" : "The verdict") : "Next"
+          !isLast
+            ? "Next"
+            : hasPredictions(ctx)
+              ? "The predictions"
+              : hasTiebreaker(ctx)
+                ? "The tiebreaker"
+                : "The verdict"
         )
       )
     )
@@ -171,6 +177,63 @@ function hasPredictions(ctx: RevealContext): boolean {
   return (
     ENABLE_PREDICTIONS &&
     (ctx.data.p1.prediction !== null || ctx.data.p2.prediction !== null)
+  );
+}
+
+// The tiebreaker screen appears when at least one side actually played
+// (old games and both-skipped games have only nulls and show nothing).
+function hasTiebreaker(ctx: RevealContext): boolean {
+  return ctx.data.p1.flappy !== null || ctx.data.p2.flappy !== null;
+}
+
+function afterPredictions(ctx: RevealContext): void {
+  if (hasTiebreaker(ctx)) {
+    showTiebreaker(ctx);
+  } else {
+    showFinal(ctx);
+  }
+}
+
+function tiebreakerRow(label: string, score: number | null): HTMLElement {
+  return h(
+    "div",
+    { class: "pred-block" },
+    h("span", { class: "side-who" }, label),
+    score === null
+      ? h("p", { class: "pred-react" }, "Refused to play.")
+      : h("p", { class: "score-huge", style: "font-size: 3rem; margin: 0.15rem 0 0" }, String(score))
+  );
+}
+
+function tiebreakerLine(you: number | null, them: number | null): string {
+  if (you === null || them === null) return "One of you takes this seriously.";
+  if (you === them) return "A tie. How diplomatic.";
+  return you > them ? "No further questions." : "Unfortunate.";
+}
+
+function showTiebreaker(ctx: RevealContext): void {
+  const you = ctx.perspective === "p2" ? ctx.data.p2.flappy : ctx.data.p1.flappy;
+  const them = ctx.perspective === "p2" ? ctx.data.p1.flappy : ctx.data.p2.flappy;
+
+  mount(
+    h(
+      "div",
+      { class: "screen" },
+      h("header", { class: "landing-top" }, wordmark()),
+      h(
+        "main",
+        { class: "centered" },
+        h("h1", { class: "kicker" }, "The tiebreaker"),
+        tiebreakerRow(ctx.youLabel, you),
+        tiebreakerRow(ctx.themLabel, them),
+        h("p", { class: "flavor" }, tiebreakerLine(you, them))
+      ),
+      h(
+        "div",
+        { class: "stack" },
+        h("button", { class: "btn btn-primary", onclick: () => showFinal(ctx) }, "The verdict")
+      )
+    )
   );
 }
 
@@ -209,7 +272,11 @@ function showPredictions(ctx: RevealContext): void {
       h(
         "div",
         { class: "stack" },
-        h("button", { class: "btn btn-primary", onclick: () => showFinal(ctx) }, "The verdict")
+        h(
+          "button",
+          { class: "btn btn-primary", onclick: () => afterPredictions(ctx) },
+          hasTiebreaker(ctx) ? "The tiebreaker" : "The verdict"
+        )
       )
     )
   );

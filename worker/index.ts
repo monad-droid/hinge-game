@@ -4,7 +4,9 @@ import {
   CODE_ALPHABET,
   CODE_LENGTH,
   CURRENT_PACK_ID,
+  ENABLE_MINIGAME,
   ENABLE_PREDICTIONS,
+  FLAPPY_MAX_SCORE,
   GAME_EXPIRATION_DAYS,
   QUESTIONS_PER_GAME,
 } from "../shared/config";
@@ -29,9 +31,11 @@ interface GameRow {
   expires_at: number;
   p1_answers: string;
   p1_prediction: number | null;
+  p1_flappy: number | null;
   p1_submitted_at: number;
   p2_answers: string | null;
   p2_prediction: number | null;
+  p2_flappy: number | null;
   p2_submitted_at: number | null;
 }
 
@@ -79,6 +83,18 @@ function parsePrediction(value: unknown): { ok: boolean; prediction: number | nu
   return { ok: false, prediction: null };
 }
 
+// Tiebreaker score: a small non-negative integer, or null when the player
+// skipped it (or the minigame is disabled).
+function parseFlappy(value: unknown): { ok: boolean; flappy: number | null } {
+  if (!ENABLE_MINIGAME || value === null || value === undefined) {
+    return { ok: true, flappy: null };
+  }
+  if (typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= FLAPPY_MAX_SCORE) {
+    return { ok: true, flappy: value };
+  }
+  return { ok: false, flappy: null };
+}
+
 function serializeAnswers(answers: Answer[]): string {
   return answers.join("");
 }
@@ -114,12 +130,14 @@ app.post("/api/games", async (c) => {
   } catch {
     return err(c, 400, "bad_request", "Malformed request.");
   }
-  const { answers: rawAnswers, prediction: rawPrediction } = (body ?? {}) as Record<string, unknown>;
+  const { answers: rawAnswers, prediction: rawPrediction, flappy: rawFlappy } = (body ?? {}) as Record<string, unknown>;
 
   const answers = parseAnswers(rawAnswers);
   if (!answers) return err(c, 400, "bad_request", "Exactly 7 answers of 0 or 1 are required.");
   const { ok, prediction } = parsePrediction(rawPrediction);
   if (!ok) return err(c, 400, "bad_request", "Prediction must be an integer from 0 to 7.");
+  const flappyParsed = parseFlappy(rawFlappy);
+  if (!flappyParsed.ok) return err(c, 400, "bad_request", "Tiebreaker score is invalid.");
 
   const pack = getPack(CURRENT_PACK_ID);
   if (!pack) return err(c, 500, "bad_request", "No question pack configured.");
@@ -133,10 +151,10 @@ app.post("/api/games", async (c) => {
     const code = generateCode();
     try {
       await c.env.DB.prepare(
-        `INSERT INTO games (code, pack_id, created_at, expires_at, p1_answers, p1_prediction, p1_submitted_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO games (code, pack_id, created_at, expires_at, p1_answers, p1_prediction, p1_flappy, p1_submitted_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
       )
-        .bind(code, pack.id, now, expiresAt, serializeAnswers(answers), prediction, now)
+        .bind(code, pack.id, now, expiresAt, serializeAnswers(answers), prediction, flappyParsed.flappy, now)
         .run();
       return c.json<CreateGameResponse>({ code }, 201);
     } catch (e) {
@@ -179,12 +197,14 @@ app.post("/api/games/:code/p2", async (c) => {
   } catch {
     return err(c, 400, "bad_request", "Malformed request.");
   }
-  const { answers: rawAnswers, prediction: rawPrediction } = (body ?? {}) as Record<string, unknown>;
+  const { answers: rawAnswers, prediction: rawPrediction, flappy: rawFlappy } = (body ?? {}) as Record<string, unknown>;
 
   const answers = parseAnswers(rawAnswers);
   if (!answers) return err(c, 400, "bad_request", "Exactly 7 answers of 0 or 1 are required.");
   const { ok, prediction } = parsePrediction(rawPrediction);
   if (!ok) return err(c, 400, "bad_request", "Prediction must be an integer from 0 to 7.");
+  const flappyParsed = parseFlappy(rawFlappy);
+  if (!flappyParsed.ok) return err(c, 400, "bad_request", "Tiebreaker score is invalid.");
 
   const row = await loadGame(c.env.DB, code);
   if (!row) return err(c, 404, "not_found", "That debate doesn't exist.");
@@ -194,10 +214,10 @@ app.post("/api/games/:code/p2", async (c) => {
   }
 
   const result = await c.env.DB.prepare(
-    `UPDATE games SET p2_answers = ?, p2_prediction = ?, p2_submitted_at = ?
+    `UPDATE games SET p2_answers = ?, p2_prediction = ?, p2_flappy = ?, p2_submitted_at = ?
      WHERE code = ? AND p2_submitted_at IS NULL`
   )
-    .bind(serializeAnswers(answers), prediction, Date.now(), code)
+    .bind(serializeAnswers(answers), prediction, flappyParsed.flappy, Date.now(), code)
     .run();
 
   if (!result.meta.changes) {
@@ -228,8 +248,16 @@ app.get("/api/games/:code/reveal", async (c) => {
   return c.json<RevealResponse>({
     code: row.code,
     packId: row.pack_id,
-    p1: { answers: p1, prediction: ENABLE_PREDICTIONS ? row.p1_prediction : null },
-    p2: { answers: p2, prediction: ENABLE_PREDICTIONS ? row.p2_prediction : null },
+    p1: {
+      answers: p1,
+      prediction: ENABLE_PREDICTIONS ? row.p1_prediction : null,
+      flappy: ENABLE_MINIGAME ? row.p1_flappy : null,
+    },
+    p2: {
+      answers: p2,
+      prediction: ENABLE_PREDICTIONS ? row.p2_prediction : null,
+      flappy: ENABLE_MINIGAME ? row.p2_flappy : null,
+    },
     score,
   });
 });

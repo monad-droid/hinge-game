@@ -7,9 +7,11 @@ CREATE TABLE IF NOT EXISTS games (
   expires_at      INTEGER NOT NULL, -- unix ms
   p1_answers      TEXT NOT NULL,
   p1_prediction   INTEGER,          -- NULL when predictions disabled
+  p1_flappy       INTEGER,          -- tiebreaker score; NULL = skipped/disabled
   p1_submitted_at INTEGER NOT NULL,
   p2_answers      TEXT,
   p2_prediction   INTEGER,
+  p2_flappy       INTEGER,
   p2_submitted_at INTEGER
 );
 

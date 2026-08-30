@@ -328,6 +328,38 @@ h2:focus-visible {
   cursor: default;
 }
 
+/* ————— flappy tiebreaker ————— */
+
+.flappy-screen {
+  padding-bottom: 0;
+}
+
+.flappy-stage {
+  position: relative;
+  flex: 1;
+  margin: 0.75rem -24px 0;
+  overflow: hidden;
+}
+
+.flappy-canvas {
+  display: block;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.flappy-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 24px;
+  background: var(--paper);
+  animation: screen-in 200ms ease-out both;
+}
+
 /* ————— prediction ————— */
 
 .tally {

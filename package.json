@@ -10,6 +10,8 @@
     "check": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p worker/tsconfig.json",
     "db:local": "wrangler d1 execute debatable-db --local --file=./schema.sql",
     "db:remote": "wrangler d1 execute debatable-db --remote --file=./schema.sql",
+    "db:migrate:local": "wrangler d1 execute debatable-db --local --file=./migrations/0002-flappy.sql",
+    "db:migrate:remote": "wrangler d1 execute debatable-db --remote --file=./migrations/0002-flappy.sql",
     "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {

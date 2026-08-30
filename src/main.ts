@@ -46,8 +46,8 @@ function startPlayer1(): void {
   startQuiz({
     pack,
     draftKey: "p1",
-    onComplete: async (answers: Answer[], prediction: number | null) => {
-      const { code } = await api.createGame(answers, ENABLE_PREDICTIONS ? prediction : null);
+    onComplete: async (answers: Answer[], prediction: number | null, flappy: number | null) => {
+      const { code } = await api.createGame(answers, ENABLE_PREDICTIONS ? prediction : null, flappy);
       setRole(code, "p1");
       history.replaceState(null, "", `/g/${code}`);
       showShare(code, { fresh: true, onReady: () => void goReveal(code) });
@@ -100,9 +100,9 @@ function beginPlayer2(code: string, packId: string): void {
   startQuiz({
     pack,
     draftKey: `p2.${code}`,
-    onComplete: async (answers: Answer[], prediction: number | null) => {
+    onComplete: async (answers: Answer[], prediction: number | null, flappy: number | null) => {
       try {
-        await api.submitP2(code, answers, ENABLE_PREDICTIONS ? prediction : null);
+        await api.submitP2(code, answers, ENABLE_PREDICTIONS ? prediction : null, flappy);
       } catch (e) {
         if (e instanceof ApiFail && e.kind === "already_settled") {
           await resolveSettledConflict(code, answers);
