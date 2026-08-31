@@ -133,7 +133,7 @@ function showIntroP1(challenge: DrawingChallenge, opts: DrawingRoundOptions): vo
         "main",
         { class: "centered" },
         h("h1", { class: "display" }, "Finish the drawing."),
-        h("p", { class: "sub" }, "You're building this together. One line each."),
+        h("p", { class: "sub" }, "You're building this together. One part each."),
         h("div", { class: "ref-frame" }, referenceSvg(challenge)),
         h("p", { class: "kicker", style: "margin-top: 1rem" }, "Pick your part"),
         h(
