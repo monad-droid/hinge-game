@@ -258,7 +258,7 @@ function showDraw(
       h(
         "main",
         { class: "draw-main" },
-        h("h1", { class: "kicker", style: "margin-bottom: 0.1rem" }, `Draw ${component.label}`),
+        h("h1", { class: "kicker", style: "margin-bottom: 0.1rem" }, "Draw your section"),
         instructions,
         stage
       ),
