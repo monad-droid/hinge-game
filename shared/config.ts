@@ -12,9 +12,10 @@ export const ENABLE_PREDICTIONS = true;
 export const ENABLE_MINIGAME = true;
 export const FLAPPY_MAX_SCORE = 9999;
 
-// The question pack new games are created from. Only one pack exists in v1;
-// pack selection UI is intentionally out of scope.
-export const CURRENT_PACK_ID = "original";
+// The question pack every new game is created from — the one live question
+// list. Existing games keep the pack they were created with, so bumping
+// this never rewrites an old game's reveal.
+export const CURRENT_PACK_ID = "original-v2";
 
 export const QUESTIONS_PER_GAME = 7;
 
