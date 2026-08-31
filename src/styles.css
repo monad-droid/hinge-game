@@ -365,18 +365,21 @@ h2:focus-visible {
 }
 
 .btn-flight.is-launching {
-  animation: flight-rainbow 5.5s linear infinite, flight-launch 620ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: flight-rainbow 5.5s linear infinite, flight-launch 620ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
 @keyframes flight-launch {
-  35% {
-    transform: scale(1.08) translateY(-6px);
+  30% {
+    transform: scale(1.14);
+    opacity: 1;
   }
-  65% {
-    transform: scale(1.03) translateY(-2px);
+  55% {
+    transform: scale(0.75);
+    opacity: 0;
   }
   100% {
-    transform: scale(1) translateY(0);
+    transform: scale(0.75);
+    opacity: 0;
   }
 }
 
@@ -396,8 +399,15 @@ h2:focus-visible {
   }
   to {
     opacity: 0;
-    transform: scale(1.35, 2.6);
+    transform: scale(1.5, 3.2);
   }
+}
+
+/* firework shards from the exploded button */
+.spark {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2;
 }
 
 @media (prefers-reduced-motion: reduce) {

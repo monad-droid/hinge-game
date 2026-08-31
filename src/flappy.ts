@@ -82,6 +82,39 @@ function makeBirdFrames(): HTMLCanvasElement[] {
   });
 }
 
+// Blows the Play button apart: shards of the palette fan out from the
+// button's area, arc under fake gravity, and fade. Pure DOM + WAAPI.
+function explodeButton(container: HTMLElement, btn: HTMLElement): void {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const rect = btn.getBoundingClientRect();
+  const home = container.getBoundingClientRect();
+  const colors = ["#ff4d00", "#ffc233", "#74bf2e", "#2657e0", "#a04de0", "#191512", "#ffffff"];
+  for (let i = 0; i < 28; i++) {
+    const shard = document.createElement("span");
+    shard.className = "spark";
+    const size = 5 + Math.random() * 8;
+    const x = rect.left - home.left + Math.random() * rect.width;
+    const y = rect.top - home.top + Math.random() * rect.height;
+    shard.style.cssText = `left:${x}px;top:${y}px;width:${size}px;height:${
+      size * (Math.random() < 0.4 ? 2.4 : 1)
+    }px;background:${colors[i % colors.length]}`;
+    container.append(shard);
+    const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.7; // upward fan
+    const dist = 90 + Math.random() * 210;
+    const dx = Math.cos(angle) * dist;
+    const dy = Math.sin(angle) * dist;
+    const spin = (Math.random() - 0.5) * 720;
+    shard.animate(
+      [
+        { transform: "translate(0, 0) rotate(0deg)", opacity: 1 },
+        { transform: `translate(${dx}px, ${dy}px) rotate(${spin}deg)`, opacity: 1, offset: 0.65 },
+        { transform: `translate(${dx}px, ${dy + 70}px) rotate(${spin * 1.4}deg)`, opacity: 0 },
+      ],
+      { duration: 700 + Math.random() * 300, easing: "cubic-bezier(0.16, 0.85, 0.35, 1)", fill: "forwards" }
+    );
+  }
+}
+
 export function playFlappy(opts: FlappyOptions): void {
   const canvas = h("canvas", { class: "flappy-canvas", "aria-label": "Flappy tiebreaker game" });
 
@@ -104,10 +137,12 @@ export function playFlappy(opts: FlappyOptions): void {
             const btn = e.currentTarget as HTMLButtonElement;
             btn.disabled = true;
             btn.classList.add("is-launching");
+            explodeButton(startOverlay, btn);
+            const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
             window.setTimeout(() => {
               startOverlay.remove();
               phase = "ready";
-            }, 620);
+            }, reduced ? 150 : 800);
           },
         },
         "Play"
