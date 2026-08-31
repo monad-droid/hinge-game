@@ -532,6 +532,15 @@ h2:focus-visible {
   stroke: rgba(25, 21, 18, 0.18);
 }
 
+/* faint dashed target behind the players' combined drawing */
+.ref-line-ghost {
+  fill: none;
+  stroke: rgba(25, 21, 18, 0.22);
+  stroke-width: 1.6;
+  stroke-dasharray: 3 4;
+  stroke-linejoin: round;
+}
+
 .draw-screen {
   touch-action: manipulation;
   user-select: none;

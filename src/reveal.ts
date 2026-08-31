@@ -285,6 +285,20 @@ function showDrawReveal(ctx: RevealContext): void {
     { points: drawing.p1.points, className: "stroke-p1" },
     { points: drawing.p2.points, className: "stroke-p2" },
   ]);
+  // Ghost of the reference behind their strokes, so the gap between plan
+  // and reality is visible in the same frame.
+  const challengeForGhost = getChallenge(drawing.challengeId);
+  if (challengeForGhost) {
+    for (const component of [...challengeForGhost.components].reverse()) {
+      const ghost = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+      ghost.setAttribute(
+        "points",
+        component.referencePath.map((p) => `${(p.x * 100).toFixed(2)},${(p.y * 100).toFixed(2)}`).join(" ")
+      );
+      ghost.setAttribute("class", "ref-line-ghost");
+      svg.prepend(ghost);
+    }
+  }
   const frame = h("div", { class: "combined-frame" });
   frame.append(svg);
 
@@ -318,7 +332,7 @@ function showDrawReveal(ctx: RevealContext): void {
 
   // Stage the strokes: P1's part draws itself in, then P2's, then the
   // caption, count-up team score, verdict.
-  const lines = Array.from(svg.querySelectorAll("polyline"));
+  const lines = Array.from(svg.querySelectorAll<SVGPolylineElement>(".stroke-p1, .stroke-p2"));
   const durations = [900, 900];
   let delay = reduced ? 0 : 250;
   lines.forEach((line, i) => {
