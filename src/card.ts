@@ -1,7 +1,7 @@
 // Client-side PNG of the result card (1080×1350, the classic 4:5 social
 // size). Screenshots are the primary path; this is the deluxe option.
 
-import { PUBLIC_DOMAIN, QUESTIONS_PER_GAME } from "../shared/config";
+import { BUILT_BY, PUBLIC_DOMAIN, QUESTIONS_PER_GAME } from "../shared/config";
 import type { PointTriple } from "../shared/drawing";
 
 export interface CardData {
@@ -181,10 +181,13 @@ async function renderCardPng(data: CardData): Promise<Blob> {
     drawTracked(ctx, `TEAM DRAWING: ${data.drawing.teamScore}%`, box.x, box.y + box.size + 48, 3);
   }
 
-  // Domain
+  // Domain + credit
   ctx.fillStyle = ACCENT;
   ctx.font = `800 40px ${sans}`;
-  drawTracked(ctx, PUBLIC_DOMAIN.toUpperCase(), margin, H - 120, 10);
+  drawTracked(ctx, PUBLIC_DOMAIN.toUpperCase(), margin, H - 140, 10);
+  ctx.fillStyle = MUTED;
+  ctx.font = `600 26px ${sans}`;
+  ctx.fillText(BUILT_BY, margin, H - 92);
 
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
   if (!blob) throw new Error("toBlob failed");

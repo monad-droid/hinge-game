@@ -2,7 +2,7 @@
 // then predictions, then the final verdict and shareable card. Paced, not
 // a dashboard.
 
-import { ENABLE_PREDICTIONS, PUBLIC_DOMAIN, QUESTIONS_PER_GAME } from "../shared/config";
+import { BUILT_BY, ENABLE_PREDICTIONS, PUBLIC_DOMAIN, QUESTIONS_PER_GAME } from "../shared/config";
 import { getPack } from "../shared/packs";
 import type { Pack, Question } from "../shared/packs";
 import { pickDrawVerdict, pickVerdict, predictionReaction } from "../shared/verdicts";
@@ -537,7 +537,12 @@ function showShareCard(ctx: RevealContext): void {
     ),
     drawRow,
     h("p", { class: "card-verdict" }, ctx.verdict),
-    h("span", { class: "card-domain" }, PUBLIC_DOMAIN)
+    h(
+      "div",
+      null,
+      h("span", { class: "card-domain" }, PUBLIC_DOMAIN),
+      h("p", { class: "fine", style: "margin-top: 0.25rem" }, BUILT_BY)
+    )
   );
 
   mount(

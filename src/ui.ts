@@ -1,5 +1,7 @@
 // Tiny DOM helpers. No framework — the app is eight screens and a fetch.
 
+import { BUILT_BY } from "../shared/config";
+
 type Child = Node | string | number | null | undefined | false;
 
 export function h<K extends keyof HTMLElementTagNameMap>(
@@ -70,5 +72,10 @@ export function wordmark(): HTMLElement {
 }
 
 export function footerNote(): HTMLElement {
-  return h("div", { class: "footer" }, h("p", { class: "fine" }, "Games disappear after 30 days."));
+  return h(
+    "div",
+    { class: "footer" },
+    h("p", { class: "fine" }, "Games disappear after 30 days."),
+    h("p", { class: "fine", style: "margin-top: 0.3rem" }, BUILT_BY)
+  );
 }
