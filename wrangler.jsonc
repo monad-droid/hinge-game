@@ -17,13 +17,12 @@
     "run_worker_first": true
   },
 
-  // Game storage. Create with: wrangler d1 create debatable-db
-  // then paste the database_id it prints here.
+  // Game storage.
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "debatable-db",
-      "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+      "database_id": "9633a8f9-426e-4eef-96d8-24d513025741"
     }
   ],
 
