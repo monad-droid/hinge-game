@@ -184,6 +184,13 @@ button {
 .btn-primary {
   background: var(--ink);
   color: var(--paper);
+  /* An ink shadow under an ink button reads as a misaligned double box;
+     the accent offset makes the hard shadow legible as a style choice. */
+  box-shadow: 4px 4px 0 var(--accent);
+}
+
+.btn-primary:active {
+  box-shadow: 1px 1px 0 var(--accent);
 }
 
 .btn-ghost {
