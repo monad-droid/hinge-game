@@ -141,12 +141,12 @@ function showIntroP1(challenge: DrawingChallenge, opts: DrawingRoundOptions): vo
           { class: "stack" },
           h(
             "button",
-            { class: "btn btn-primary", onclick: () => showRules(challenge, a, opts) },
+            { class: "btn btn-primary", onclick: () => showDraw(challenge, a, opts) },
             capitalize(a.label)
           ),
           h(
             "button",
-            { class: "btn btn-primary", onclick: () => showRules(challenge, b, opts) },
+            { class: "btn btn-primary", onclick: () => showDraw(challenge, b, opts) },
             capitalize(b.label)
           )
         )
@@ -187,49 +187,8 @@ function showIntroP2(
           { class: "stack mt" },
           h(
             "button",
-            { class: "btn btn-primary", onclick: () => showRules(challenge, component, opts) },
-            `Draw ${component.label}`
-          )
-        )
-      ),
-      footerNote()
-    )
-  );
-}
-
-// One-stroke rule acknowledgment: nobody reaches the canvas without
-// explicitly confirming they understand the constraint.
-function showRules(
-  challenge: DrawingChallenge,
-  component: DrawingComponent,
-  opts: DrawingRoundOptions
-): void {
-  mount(
-    h(
-      "div",
-      { class: "screen" },
-      h(
-        "header",
-        { class: "quiz-top" },
-        wordmark(),
-        h("span", { class: "progress-label" }, "The rules")
-      ),
-      h(
-        "main",
-        { class: "centered" },
-        h("h1", { class: "display" }, "One line. No lifting."),
-        h(
-          "p",
-          { class: "sub" },
-          "Once your finger touches down, that's your drawing until you let go. You get one retry. Choose your moment."
-        ),
-        h(
-          "div",
-          { class: "stack mt" },
-          h(
-            "button",
             { class: "btn btn-primary", onclick: () => showDraw(challenge, component, opts) },
-            "I understand"
+            `Draw ${component.label}`
           )
         )
       ),
