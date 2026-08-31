@@ -82,9 +82,47 @@ function afterAnswers(
     showPrediction(opts, answers, settledFlappy, settledDrawing);
   } else {
     void submit(opts, answers, null, settledFlappy, settledDrawing, () =>
-      afterAnswers(opts, answers, settledFlappy, settledDrawing)
+      showSubmitRetry(opts, answers, settledFlappy, settledDrawing)
     );
   }
+}
+
+// A failed final submit lands here instead of silently re-submitting in a
+// loop: one clear screen, one explicit retry (nothing is lost — answers,
+// tiebreaker, and drawing are all settled at this point).
+function showSubmitRetry(
+  opts: QuizOptions,
+  answers: Answer[],
+  flappy: number | null,
+  drawing: DrawingSubmission | null
+): void {
+  mount(
+    h(
+      "div",
+      { class: "screen" },
+      h("header", { class: "landing-top" }, wordmark()),
+      h(
+        "main",
+        { class: "centered" },
+        h("h1", { class: "display" }, "That didn't go through."),
+        h("p", { class: "sub" }, "Your answers are safe. Check your signal and try again."),
+        h(
+          "div",
+          { class: "stack mt" },
+          h(
+            "button",
+            {
+              class: "btn btn-primary",
+              onclick: () => void submit(opts, answers, null, flappy, drawing, () =>
+                showSubmitRetry(opts, answers, flappy, drawing)
+              ),
+            },
+            "Try again"
+          )
+        )
+      )
+    )
+  );
 }
 
 function showQuestion(opts: QuizOptions, answers: Answer[]): void {

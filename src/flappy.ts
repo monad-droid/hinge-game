@@ -214,18 +214,21 @@ function explodeButton(container: HTMLElement, btn: HTMLElement): void {
 function rainConfetti(container: HTMLElement): void {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const home = container.getBoundingClientRect();
+  // Spawn above the very top of the SCREEN (not just the stage), so the
+  // shower visibly enters from the top edge of the page.
+  const spawnY = -(Math.max(0, home.top) + 30);
   for (let i = 0; i < 102; i++) {
     const piece = document.createElement("span");
     piece.className = "spark";
     const size = 3 + Math.random() * 4;
     const strip = Math.random() < 0.5;
-    piece.style.cssText = `left:${Math.random() * home.width}px;top:-26px;width:${size}px;height:${
+    piece.style.cssText = `left:${Math.random() * home.width}px;top:${spawnY}px;width:${size}px;height:${
       strip ? size * 2.3 : size
     }px;background:${BOOM_COLORS[i % BOOM_COLORS.length]}`;
     container.append(piece);
     const drift = (Math.random() - 0.5) * 140;
     const flutter = 14 + Math.random() * 22;
-    const fall = home.height + 70;
+    const fall = home.height - spawnY + 40;
     const spin = (Math.random() - 0.5) * 1080;
     const anim = piece.animate(
       [
