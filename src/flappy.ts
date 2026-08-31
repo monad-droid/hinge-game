@@ -3,7 +3,7 @@
 // canvas (original artwork, no image assets). Calls onDone(score) when the
 // run ends and the player continues, or onDone(null) if they skip.
 
-import { h, mount, onScreenExit } from "./ui";
+import { h, mount, onScreenExit, wordmark } from "./ui";
 
 export interface FlappyOptions {
   onDone: (score: number | null) => void;
@@ -307,7 +307,7 @@ export function playFlappy(opts: FlappyOptions): void {
       h(
         "header",
         { class: "quiz-top" },
-        h("span", { class: "wordmark", "aria-hidden": "true" }, "Debat", h("em", null, "able")),
+        wordmark(),
         h("span", { class: "progress-label" }, "Bonus round")
       ),
       stage
@@ -591,7 +591,13 @@ export function playFlappy(opts: FlappyOptions): void {
   stage.addEventListener("pointerdown", onPointer);
   // pointerdown preventDefault doesn't stop every WebKit touch gesture;
   // swallow raw touch events on the stage too (non-passive on purpose).
-  const onTouch = (e: Event) => e.preventDefault();
+  // NEVER for touches on buttons: canceling touchend suppresses the click
+  // they need to fire.
+  const onTouch = (e: Event) => {
+    const target = e.target as HTMLElement | null;
+    if (target && target.closest("button")) return;
+    e.preventDefault();
+  };
   stage.addEventListener("touchstart", onTouch, { passive: false });
   stage.addEventListener("touchend", onTouch, { passive: false });
   window.addEventListener("keydown", onKey);

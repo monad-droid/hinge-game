@@ -8,7 +8,7 @@ import { PREDICTION_FLAVOR } from "../shared/verdicts";
 import type { Answer } from "../shared/types";
 import { playFlappy } from "./flappy";
 import { clearDraft, getDraft, setDraft } from "./storage";
-import { h, mount, toast } from "./ui";
+import { h, mount, toast, wordmark } from "./ui";
 
 export interface QuizOptions {
   pack: Pack;
@@ -91,7 +91,7 @@ function showQuestion(opts: QuizOptions, answers: Answer[]): void {
       h(
         "header",
         { class: "quiz-top" },
-        h("span", { class: "wordmark", "aria-hidden": "true" }, "Debat", h("em", null, "able")),
+        wordmark(),
         h(
           "span",
           { class: "progress-label" },
@@ -175,7 +175,7 @@ function showPrediction(opts: QuizOptions, answers: Answer[], flappy: number | n
       h(
         "header",
         { class: "quiz-top" },
-        h("span", { class: "wordmark", "aria-hidden": "true" }, "Debat", h("em", null, "able")),
+        wordmark(),
         h("span", { class: "progress-label" }, "Last step")
       ),
       h(

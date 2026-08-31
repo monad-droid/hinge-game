@@ -150,7 +150,7 @@ function showCard(ctx: RevealContext, index: number): void {
       h(
         "header",
         { class: "quiz-top" },
-        h("span", { class: "wordmark", "aria-hidden": "true" }, "Debat", h("em", null, "able")),
+        wordmark(),
         h("span", { class: "progress-label" }, `${index + 1} / ${QUESTIONS_PER_GAME}`)
       ),
       card,
@@ -350,7 +350,7 @@ function showShareCard(ctx: RevealContext): void {
       h(
         "header",
         { class: "quiz-top" },
-        h("span", { class: "wordmark", "aria-hidden": "true" }, "Debat", h("em", null, "able")),
+        wordmark(),
         h("span", { class: "progress-label" }, "Exhibit A")
       ),
       card,
