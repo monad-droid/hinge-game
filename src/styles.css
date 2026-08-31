@@ -6,6 +6,8 @@
   --paper: #f6f1e7;
   --ink: #191512;
   --accent: #ff4d00;
+  --sun: #ffc233;
+  --blue: #2657e0;
   --muted: rgba(25, 21, 18, 0.55);
   --line: rgba(25, 21, 18, 0.16);
   --serif: "Instrument Serif", Georgia, "Times New Roman", serif;
@@ -463,11 +465,13 @@ h2:focus-visible {
 }
 
 .tag-same {
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
 }
 
 .score-huge {
+  color: var(--accent);
   font-family: var(--serif);
   font-size: clamp(5rem, 32vw, 9rem);
   line-height: 1;
@@ -543,7 +547,15 @@ h2:focus-visible {
   font-style: italic;
   font-size: 1.15rem;
   margin: 1.5rem 0 0;
-  color: var(--ink);
+  color: var(--accent);
+}
+
+/* highlighter-pen treatment for the words worth circling */
+.hl {
+  background: var(--sun);
+  padding: 0.02em 0.14em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 
 /* ————— prediction reveal ————— */
@@ -601,6 +613,7 @@ h2:focus-visible {
 }
 
 .share-card .cardscore {
+  color: var(--accent);
   font-family: var(--serif);
   font-size: clamp(4rem, 22vw, 6rem);
   line-height: 1;

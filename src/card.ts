@@ -14,31 +14,47 @@ const H = 1350;
 const PAPER = "#f6f1e7";
 const INK = "#191512";
 const ACCENT = "#ff4d00";
+const SUN = "#ffc233";
 const MUTED = "rgba(25, 21, 18, 0.55)";
 
+// Wraps text; with a highlight color set, paints a marker-pen bar behind
+// each line first (sized for the current font's line box).
 function wrapText(
   ctx: CanvasRenderingContext2D,
   text: string,
   x: number,
   y: number,
   maxWidth: number,
-  lineHeight: number
+  lineHeight: number,
+  highlight?: string
 ): number {
   const words = text.split(" ");
+  const lines: string[] = [];
   let line = "";
-  let cursorY = y;
   for (const word of words) {
     const attempt = line ? `${line} ${word}` : word;
     if (ctx.measureText(attempt).width > maxWidth && line) {
-      ctx.fillText(line, x, cursorY);
+      lines.push(line);
       line = word;
-      cursorY += lineHeight;
     } else {
       line = attempt;
     }
   }
-  if (line) ctx.fillText(line, x, cursorY);
-  return cursorY + lineHeight;
+  if (line) lines.push(line);
+
+  let cursorY = y;
+  const textColor = ctx.fillStyle;
+  for (const l of lines) {
+    if (highlight) {
+      const width = ctx.measureText(l).width;
+      ctx.fillStyle = highlight;
+      ctx.fillRect(x - 8, cursorY - lineHeight * 0.62, width + 16, lineHeight * 0.82);
+      ctx.fillStyle = textColor;
+    }
+    ctx.fillText(l, x, cursorY);
+    cursorY += lineHeight;
+  }
+  return cursorY;
 }
 
 // Saving: on phones we hand the PNG to the native share sheet (so iOS offers
@@ -102,7 +118,7 @@ async function renderCardPng(data: CardData): Promise<Blob> {
 
   // Score
   ctx.font = `italic 300px ${serif}`;
-  ctx.fillStyle = INK;
+  ctx.fillStyle = ACCENT;
   const scoreText = String(data.score);
   ctx.fillText(scoreText, margin, 500);
   const scoreWidth = ctx.measureText(scoreText).width;
@@ -125,7 +141,7 @@ async function renderCardPng(data: CardData): Promise<Blob> {
   ctx.fillStyle = INK;
   ctx.font = `800 64px ${sans}`;
   const topic = (data.disputeTopic ?? "None. Which is somehow worse.").toUpperCase();
-  const afterTopic = wrapText(ctx, topic, margin, 770, W - margin * 2, 78);
+  const afterTopic = wrapText(ctx, topic, margin, 770, W - margin * 2, 78, SUN);
 
   // Verdict
   ctx.fillStyle = INK;

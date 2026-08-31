@@ -1,37 +1,38 @@
 {
-	// Debatable — Cloudflare Worker configuration.
-	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "debatable",
-	"main": "worker/index.ts",
-	"compatibility_date": "2025-08-01",
-	// Static frontend (built by Vite into ./dist).
-	// /api/* always runs the Worker; everything else is served as a static
-	// asset, falling back to index.html for SPA routes like /g/XK42P.
-	"assets": {
-		"directory": "./dist",
-		"binding": "ASSETS",
-		"not_found_handling": "single-page-application",
-		"run_worker_first": [
-			"/api/*"
-		]
-	},
-	// Game storage. Create with: wrangler d1 create debatable-db
-	// then paste the database_id it prints here.
-	"d1_databases": [
-  {
-    "binding": "DB",
-    "database_name": "debatable-db",
-    "database_id": "9633a8f9-426e-4eef-96d8-24d513025741"
+  // Debatable — Cloudflare Worker configuration.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "debatable",
+  "main": "worker/index.ts",
+  "compatibility_date": "2025-08-01",
+
+  // Static frontend (built by Vite into ./dist). All requests run the
+  // Worker so it can set cache headers: HTML must always revalidate (stale
+  // cached bundles = users seeing an old version of the app), while hashed
+  // /assets/* files cache forever. SPA fallback serves index.html for
+  // routes like /g/XK42P.
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": true
+  },
+
+  // Game storage.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "debatable-db",
+      "database_id": "9633a8f9-426e-4eef-96d8-24d513025741"
+    }
+  ],
+
+  // Daily sweep that deletes expired games (expiry is also enforced
+  // per-request, so this is hygiene, not correctness).
+  "triggers": {
+    "crons": ["17 4 * * *"]
+  },
+
+  "observability": {
+    "enabled": true
   }
-],
-	// Daily sweep that deletes expired games (expiry is also enforced
-	// per-request, so this is hygiene, not correctness).
-	"triggers": {
-		"crons": [
-			"17 4 * * *"
-		]
-	},
-	"observability": {
-		"enabled": true
-	}
 }
