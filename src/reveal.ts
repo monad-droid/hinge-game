@@ -255,6 +255,23 @@ function showTiebreaker(ctx: RevealContext): void {
 
 // ——— Finish the Drawing reveal: tease → staged combined drawing → compare ———
 
+// Faint dashed target underneath player strokes, at the same on-screen
+// weight as the reference players traced against.
+function prependGhostReference(svg: SVGSVGElement, challengeId: string): void {
+  const challenge = getChallenge(challengeId);
+  if (!challenge) return;
+  for (const component of [...challenge.components].reverse()) {
+    const ghost = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    ghost.setAttribute(
+      "points",
+      component.referencePath.map((p) => `${(p.x * 100).toFixed(2)},${(p.y * 100).toFixed(2)}`).join(" ")
+    );
+    ghost.setAttribute("class", "ref-line-ghost");
+    ghost.setAttribute("vector-effect", "non-scaling-stroke");
+    svg.prepend(ghost);
+  }
+}
+
 function showDrawTease(ctx: RevealContext): void {
   mount(
     h(
@@ -287,19 +304,7 @@ function showDrawReveal(ctx: RevealContext): void {
   ]);
   // Ghost of the reference behind their strokes, so the gap between plan
   // and reality is visible in the same frame.
-  const challengeForGhost = getChallenge(drawing.challengeId);
-  if (challengeForGhost) {
-    for (const component of [...challengeForGhost.components].reverse()) {
-      const ghost = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-      ghost.setAttribute(
-        "points",
-        component.referencePath.map((p) => `${(p.x * 100).toFixed(2)},${(p.y * 100).toFixed(2)}`).join(" ")
-      );
-      ghost.setAttribute("class", "ref-line-ghost");
-      ghost.setAttribute("vector-effect", "non-scaling-stroke");
-      svg.prepend(ghost);
-    }
-  }
+  prependGhostReference(svg, drawing.challengeId);
   const frame = h("div", { class: "combined-frame" });
   frame.append(svg);
 
@@ -379,6 +384,7 @@ function showDrawCompare(ctx: RevealContext): void {
     { points: drawing.p1.points, className: "stroke-p1" },
     { points: drawing.p2.points, className: "stroke-p2" },
   ]);
+  prependGhostReference(combined, drawing.challengeId);
   const combinedFrame = h("div", { class: "ref-frame" });
   combinedFrame.append(combined);
 
@@ -495,12 +501,12 @@ function showShareCard(ctx: RevealContext): void {
   let drawRow: HTMLElement | null = null;
   if (drawing) {
     const thumb = h("div", { class: "card-draw-thumb" });
-    thumb.append(
-      strokesSvg([
-        { points: drawing.p1.points, className: "stroke-p1" },
-        { points: drawing.p2.points, className: "stroke-p2" },
-      ])
-    );
+    const thumbSvg = strokesSvg([
+      { points: drawing.p1.points, className: "stroke-p1" },
+      { points: drawing.p2.points, className: "stroke-p2" },
+    ]);
+    prependGhostReference(thumbSvg, drawing.challengeId);
+    thumb.append(thumbSvg);
     drawRow = h(
       "div",
       { class: "card-draw-row" },
@@ -571,7 +577,12 @@ function showShareCard(ctx: RevealContext): void {
                 verdict: ctx.verdict,
                 disputeTopic: dispute ? dispute.topic : null,
                 drawing: drawing
-                  ? { p1: drawing.p1.points, p2: drawing.p2.points, teamScore: drawing.teamScore }
+                  ? {
+                      challengeId: drawing.challengeId,
+                      p1: drawing.p1.points,
+                      p2: drawing.p2.points,
+                      teamScore: drawing.teamScore,
+                    }
                   : null,
               }).catch(() => toast("Couldn't render the image. Screenshot works.")),
           },

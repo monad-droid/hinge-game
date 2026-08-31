@@ -2,13 +2,14 @@
 // size). Screenshots are the primary path; this is the deluxe option.
 
 import { BUILT_BY, PUBLIC_DOMAIN, QUESTIONS_PER_GAME } from "../shared/config";
+import { getChallenge } from "../shared/drawing";
 import type { PointTriple } from "../shared/drawing";
 
 export interface CardData {
   score: number;
   verdict: string;
   disputeTopic: string | null;
-  drawing: { p1: PointTriple[]; p2: PointTriple[]; teamScore: number } | null;
+  drawing: { challengeId: string; p1: PointTriple[]; p2: PointTriple[]; teamScore: number } | null;
 }
 
 const W = 1080;
@@ -157,6 +158,24 @@ async function renderCardPng(data: CardData): Promise<Blob> {
     ctx.strokeStyle = INK;
     ctx.lineWidth = 6;
     ctx.strokeRect(box.x, box.y, box.size, box.size);
+    // dashed ghost of the target behind the team's strokes
+    const challenge = getChallenge(data.drawing.challengeId);
+    if (challenge) {
+      ctx.strokeStyle = MUTED;
+      ctx.lineWidth = 3;
+      ctx.setLineDash([8, 9]);
+      for (const component of challenge.components) {
+        ctx.beginPath();
+        component.referencePath.forEach((p, i) => {
+          const px = box.x + p.x * box.size;
+          const py = box.y + p.y * box.size;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        });
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+    }
     const strokes: [PointTriple[], string][] = [
       [data.drawing.p1, INK],
       [data.drawing.p2, BLUE],
