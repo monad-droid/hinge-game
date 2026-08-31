@@ -218,13 +218,6 @@ export function showExpired(onHome: () => void): void {
   ]);
 }
 
-export function showSettled(opts: { onView: () => void; onHome: () => void }): void {
-  deadEnd("Looks like this one is already settled.", "Both sides are locked in.", [
-    { label: "See the verdict", onclick: opts.onView },
-    { label: "Start a game", onclick: opts.onHome },
-  ]);
-}
-
 export function showLoading(): void {
   mount(
     h(

@@ -12,7 +12,6 @@ import {
   showNetworkError,
   showNotFound,
   showP2Intro,
-  showSettled,
   showShare,
 } from "./screens";
 import { getDraft, getRole, setRole } from "./storage";
@@ -85,12 +84,9 @@ async function enterGame(code: string): Promise<void> {
     return;
   }
 
-  // COMPLETE
-  if (role) {
-    void goReveal(code);
-  } else {
-    showSettled({ onView: () => void goReveal(code), onHome: goHome });
-  }
+  // COMPLETE — always straight to the reveal, labeled You/Them (from the
+  // stored role, or the sharer's perspective if this browser has none).
+  void goReveal(code);
 }
 
 // ————— Player 2 —————
@@ -132,9 +128,9 @@ async function resolveSettledConflict(code: string, attempted: Answer[]): Promis
       return;
     }
   } catch {
-    // fall through to the settled screen
+    // fall through — show the reveal from the default perspective
   }
-  showSettled({ onView: () => void goReveal(code), onHome: goHome });
+  void goReveal(code);
 }
 
 // ————— reveal —————
