@@ -272,6 +272,20 @@ function prependGhostReference(svg: SVGSVGElement, challengeId: string): void {
   }
 }
 
+// Which color is whose: P1 always draws in ink, P2 in blue; the labels
+// flip to match the viewer's perspective.
+function strokeLegend(ctx: RevealContext): HTMLElement {
+  const youIsP1 = ctx.perspective !== "p2";
+  const item = (label: string, swatchClass: string) =>
+    h("span", { class: "legend-item" }, h("span", { class: `legend-swatch ${swatchClass}` }), label);
+  return h(
+    "div",
+    { class: "stroke-legend" },
+    item(ctx.youLabel, youIsP1 ? "legend-ink" : "legend-blue"),
+    item(ctx.themLabel, youIsP1 ? "legend-blue" : "legend-ink")
+  );
+}
+
 function showDrawTease(ctx: RevealContext): void {
   mount(
     h(
@@ -331,7 +345,7 @@ function showDrawReveal(ctx: RevealContext): void {
       "div",
       { class: "screen" },
       h("header", { class: "landing-top" }, wordmark()),
-      h("main", { class: "centered", style: "justify-content: flex-start; padding-top: 0.5rem" }, caption, frame, scoreLine, scoreLabel, verdictLine),
+      h("main", { class: "centered", style: "justify-content: flex-start; padding-top: 0.5rem" }, caption, frame, strokeLegend(ctx), scoreLine, scoreLabel, verdictLine),
       h("div", { class: "stack" }, nextBtn)
     )
   );
@@ -406,6 +420,7 @@ function showDrawCompare(ctx: RevealContext): void {
           h("div", { class: "compare-cell" }, h("p", { class: "kicker" }, "The plan"), planFrame),
           h("div", { class: "compare-cell" }, h("p", { class: "kicker" }, "What you built"), combinedFrame)
         ),
+        strokeLegend(ctx),
         h("p", { class: "flavor" }, "This seems worth discussing.")
       ),
       h(

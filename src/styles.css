@@ -675,6 +675,35 @@ h2:focus-visible {
   margin: 0;
 }
 
+/* who drew which color */
+.stroke-legend {
+  display: flex;
+  justify-content: center;
+  gap: 1.4rem;
+  margin-top: 0.6rem;
+  font-weight: 800;
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  margin-right: 7px;
+  vertical-align: -1px;
+}
+
+.legend-ink {
+  background: var(--ink);
+}
+
+.legend-blue {
+  background: var(--blue);
+}
+
 /* mini combined drawing on the share card */
 .card-draw-row {
   display: flex;
