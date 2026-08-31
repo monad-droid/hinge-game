@@ -209,6 +209,42 @@ function explodeButton(container: HTMLElement, btn: HTMLElement): void {
   }, 260);
 }
 
+// Confetti shower from the top edge of the stage: staggered drops with
+// flutter and spin, falling through the overlay cut and over the sky.
+function rainConfetti(container: HTMLElement): void {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const home = container.getBoundingClientRect();
+  for (let i = 0; i < 34; i++) {
+    const piece = document.createElement("span");
+    piece.className = "spark";
+    const size = 6 + Math.random() * 8;
+    const strip = Math.random() < 0.5;
+    piece.style.cssText = `left:${Math.random() * home.width}px;top:-26px;width:${size}px;height:${
+      strip ? size * 2.3 : size
+    }px;background:${BOOM_COLORS[i % BOOM_COLORS.length]}`;
+    container.append(piece);
+    const drift = (Math.random() - 0.5) * 140;
+    const flutter = 14 + Math.random() * 22;
+    const fall = home.height + 70;
+    const spin = (Math.random() - 0.5) * 1080;
+    const anim = piece.animate(
+      [
+        { transform: "translate(0, 0) rotate(0deg)", opacity: 1 },
+        { transform: `translate(${drift * 0.4 + flutter}px, ${fall * 0.35}px) rotate(${spin * 0.4}deg)`, opacity: 1, offset: 0.35 },
+        { transform: `translate(${drift * 0.7 - flutter}px, ${fall * 0.68}px) rotate(${spin * 0.7}deg)`, opacity: 1, offset: 0.68 },
+        { transform: `translate(${drift}px, ${fall}px) rotate(${spin}deg)`, opacity: 0.85 },
+      ],
+      {
+        duration: 1100 + Math.random() * 900,
+        delay: Math.random() * 380,
+        easing: "cubic-bezier(0.35, 0.15, 0.75, 0.9)",
+        fill: "both",
+      }
+    );
+    anim.onfinish = () => piece.remove();
+  }
+}
+
 export function playFlappy(opts: FlappyOptions): void {
   const canvas = h("canvas", { class: "flappy-canvas", "aria-label": "Flappy tiebreaker game" });
 
@@ -232,6 +268,7 @@ export function playFlappy(opts: FlappyOptions): void {
             btn.disabled = true;
             btn.classList.add("is-launching");
             explodeButton(stage, btn);
+            rainConfetti(stage);
             const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
             // Cut to the game the moment the main burst is spent — no dead
             // beat after the explosion; the last shards finish over the sky.
