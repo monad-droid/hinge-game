@@ -1,17 +1,86 @@
-// The tiebreaker: a one-attempt flappy game in the house style. Ink bird,
-// ink pipes, paper sky. Score = pipes cleared. Calls onDone(score) when the
+// The tiebreaker: a one-attempt flappy game. Classic-arcade look — pixel
+// bird, capped pipes, scrolling ground — drawn from hand-made pixel maps on
+// canvas (original artwork, no image assets). Calls onDone(score) when the
 // run ends and the player continues, or onDone(null) if they skip.
 
-import { h, mount, onScreenExit, wordmark } from "./ui";
+import { h, mount, onScreenExit } from "./ui";
 
 export interface FlappyOptions {
   onDone: (score: number | null) => void;
 }
 
-const INK = "#191512";
-const PAPER = "#f6f1e7";
-const ACCENT = "#ff4d00";
-const MUTED = "rgba(25, 21, 18, 0.4)";
+// ——— palette (classic-inspired, our own) ———
+const SKY = "#70c5ce";
+const CLOUD = "rgba(255, 255, 255, 0.85)";
+const PIPE = "#74bf2e";
+const PIPE_LIGHT = "#a5e358";
+const PIPE_DARK = "#4e8a1e";
+const OUTLINE = "#29231a";
+const GRASS = "#7ec850";
+const GRASS_EDGE = "#5aa33c";
+const SAND = "#ded895";
+const SAND_STRIPE = "#cbc06a";
+
+// ——— bird sprite: 20×14 pixel map + 3 wing positions ———
+const BIRD_COLORS: Record<string, string> = {
+  K: OUTLINE,
+  Y: "#f6c53d",
+  L: "#f9e8b5",
+  W: "#ffffff",
+  O: "#f2842b",
+  D: "#d9650f",
+};
+
+const BIRD_MAP = [
+  ".......KKKKKK.......",
+  ".....KKYYYYYYKK.....",
+  "....KYYYYYYYKWWWK...",
+  "...KYYYYYYYKWWWWWK..",
+  "...KYYYYYYYKWWKWWK..",
+  "..KYYYYYYYYKWWWWWK..",
+  "..KYYYYYYYYYKWWWK...",
+  "..KYYYYYYYYYKKKKKKK.",
+  "..KYYYYYYYYKOOOOOOK.",
+  "..KYYYYYYYYKDDDDDDK.",
+  "...KYYYYYYYYKKKKKK..",
+  "...KYYLLLLLYYK......",
+  "....KLLLLLLLK.......",
+  ".....KKKKKKK........",
+];
+
+const WING_MAP = [
+  ".KKKKK..",
+  "KLLLLLK.",
+  "KLLLLLLK",
+  "KLLLLLK.",
+  ".KKKKK..",
+];
+
+function paintMap(ctx: CanvasRenderingContext2D, map: string[], ox: number, oy: number): void {
+  for (let y = 0; y < map.length; y++) {
+    const row = map[y]!;
+    for (let x = 0; x < row.length; x++) {
+      const color = BIRD_COLORS[row[x]!];
+      if (color) {
+        ctx.fillStyle = color;
+        ctx.fillRect(ox + x, oy + y, 1, 1);
+      }
+    }
+  }
+}
+
+// Pre-renders the three wing frames at 1× — scaled up crisply at draw time.
+function makeBirdFrames(): HTMLCanvasElement[] {
+  return [-2, 0, 2].map((wingOffset) => {
+    const c = document.createElement("canvas");
+    c.width = 20;
+    c.height = 14;
+    const ctx = c.getContext("2d")!;
+    paintMap(ctx, BIRD_MAP, 0, 0);
+    paintMap(ctx, WING_MAP, 1, 5 + wingOffset);
+    return c;
+  });
+}
 
 export function playFlappy(opts: FlappyOptions): void {
   const canvas = h("canvas", { class: "flappy-canvas", "aria-label": "Flappy tiebreaker game" });
@@ -67,6 +136,7 @@ export function playFlappy(opts: FlappyOptions): void {
   canvas.style.height = `${H}px`;
   const ctx = canvas.getContext("2d")!;
   ctx.scale(dpr, dpr);
+  ctx.imageSmoothingEnabled = false; // keep the pixel art crisp when scaled
 
   // ——— tuning (scaled so it plays the same on any screen height) ———
   const u = H / 640;
@@ -74,11 +144,21 @@ export function playFlappy(opts: FlappyOptions): void {
   const FLAP = -540 * u;
   const PIPE_SPEED = 170 * u;
   const PIPE_GAP = 185 * u;
-  const PIPE_WIDTH = 60;
-  const PIPE_SPACING = 250; // horizontal px between pipes
-  const BIRD_SIZE = 26;
+  const PIPE_WIDTH = 62;
+  const PIPE_SPACING = 250;
+  const BIRD_SIZE = 26; // collision box; the sprite is drawn a bit larger
   const BIRD_X = Math.min(W * 0.3, 140);
-  const FLOOR_Y = H - 14;
+  const GROUND_H = 48;
+  const FLOOR_Y = H - GROUND_H;
+  const SPRITE_W = 40;
+  const SPRITE_H = 28;
+
+  const birdFrames = makeBirdFrames();
+  const clouds = [0.15, 0.45, 0.75].map((f, i) => ({
+    x: W * f,
+    y: H * (0.12 + 0.11 * i),
+    r: 16 + 8 * ((i * 7) % 3),
+  }));
 
   // ——— state ———
   type Phase = "ready" | "playing" | "dead";
@@ -88,8 +168,10 @@ export function playFlappy(opts: FlappyOptions): void {
   let score = 0;
   let pipes: { x: number; gapY: number; counted: boolean }[] = [];
   let nextPipeX = W + 140;
+  let scrollX = 0;
   let raf = 0;
   let lastTime = 0;
+  let elapsed = 0;
 
   const spawnGapY = () => {
     const margin = 70 * u;
@@ -137,6 +219,7 @@ export function playFlappy(opts: FlappyOptions): void {
   const step = (dt: number) => {
     velocity += GRAVITY * dt;
     birdY += velocity * dt;
+    scrollX += PIPE_SPEED * dt;
 
     if (birdY < 0) {
       birdY = 0;
@@ -170,39 +253,94 @@ export function playFlappy(opts: FlappyOptions): void {
   };
 
   // ——— rendering ———
+  const drawPipePair = (pipe: { x: number; gapY: number }) => {
+    const capH = 26;
+    const x = pipe.x;
+
+    const body = (top: number, height: number) => {
+      if (height <= 0) return;
+      ctx.fillStyle = OUTLINE;
+      ctx.fillRect(x + 3, top, PIPE_WIDTH - 6, height);
+      ctx.fillStyle = PIPE;
+      ctx.fillRect(x + 5, top, PIPE_WIDTH - 10, height);
+      ctx.fillStyle = PIPE_LIGHT;
+      ctx.fillRect(x + 8, top, 7, height);
+      ctx.fillStyle = PIPE_DARK;
+      ctx.fillRect(x + PIPE_WIDTH - 12, top, 5, height);
+    };
+
+    const cap = (top: number) => {
+      ctx.fillStyle = OUTLINE;
+      ctx.fillRect(x, top, PIPE_WIDTH, capH);
+      ctx.fillStyle = PIPE;
+      ctx.fillRect(x + 2, top + 2, PIPE_WIDTH - 4, capH - 4);
+      ctx.fillStyle = PIPE_LIGHT;
+      ctx.fillRect(x + 5, top + 2, 8, capH - 4);
+      ctx.fillStyle = PIPE_DARK;
+      ctx.fillRect(x + PIPE_WIDTH - 10, top + 2, 5, capH - 4);
+    };
+
+    // top pipe (hangs from the ceiling)
+    body(0, pipe.gapY - capH);
+    cap(pipe.gapY - capH);
+    // bottom pipe (stands on the ground)
+    cap(pipe.gapY + PIPE_GAP);
+    body(pipe.gapY + PIPE_GAP + capH, FLOOR_Y - pipe.gapY - PIPE_GAP - capH);
+  };
+
   const draw = () => {
-    ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = PAPER;
+    // sky
+    ctx.fillStyle = SKY;
     ctx.fillRect(0, 0, W, H);
 
-    // pipes
-    ctx.fillStyle = INK;
-    for (const pipe of pipes) {
-      ctx.fillRect(pipe.x, 0, PIPE_WIDTH, pipe.gapY);
-      ctx.fillRect(pipe.x, pipe.gapY + PIPE_GAP, PIPE_WIDTH, FLOOR_Y - pipe.gapY - PIPE_GAP);
+    // clouds, drifting slower than the world
+    ctx.fillStyle = CLOUD;
+    for (const cloud of clouds) {
+      const span = W + 200;
+      const cx = ((((cloud.x - scrollX * 0.25) % span) + span) % span) - 100;
+      ctx.beginPath();
+      ctx.arc(cx, cloud.y, cloud.r, 0, Math.PI * 2);
+      ctx.arc(cx + cloud.r * 0.9, cloud.y + 4, cloud.r * 0.75, 0, Math.PI * 2);
+      ctx.arc(cx - cloud.r * 0.9, cloud.y + 5, cloud.r * 0.7, 0, Math.PI * 2);
+      ctx.fill();
     }
 
-    // floor
-    ctx.fillRect(0, FLOOR_Y, W, 3);
+    for (const pipe of pipes) drawPipePair(pipe);
 
-    // score
-    if (phase !== "ready") {
-      ctx.fillStyle = MUTED;
-      ctx.font = 'italic 64px "Instrument Serif", Georgia, serif';
-      ctx.textAlign = "center";
-      ctx.fillText(String(score), W / 2, 90);
-      ctx.textAlign = "left";
+    // ground: grass lip, then striped sand scrolling with the pipes
+    ctx.fillStyle = GRASS;
+    ctx.fillRect(0, FLOOR_Y, W, 7);
+    ctx.fillStyle = GRASS_EDGE;
+    ctx.fillRect(0, FLOOR_Y + 7, W, 3);
+    ctx.fillStyle = SAND;
+    ctx.fillRect(0, FLOOR_Y + 10, W, GROUND_H - 10);
+    ctx.fillStyle = SAND_STRIPE;
+    const stripeSpan = 26;
+    for (let sx = -stripeSpan + (-scrollX % stripeSpan); sx < W; sx += stripeSpan) {
+      ctx.fillRect(sx, FLOOR_Y + 10, 13, 9);
     }
 
-    // bird: ink square, orange eye, tilts with velocity
+    // bird: sprite frame by time, tilted with velocity
+    const frame =
+      phase === "playing" ? birdFrames[Math.floor(elapsed / 0.09) % 3]! : birdFrames[1]!;
     ctx.save();
     ctx.translate(BIRD_X + BIRD_SIZE / 2, birdY + BIRD_SIZE / 2);
-    ctx.rotate(Math.max(-0.45, Math.min(0.8, velocity / (900 * u))));
-    ctx.fillStyle = INK;
-    ctx.fillRect(-BIRD_SIZE / 2, -BIRD_SIZE / 2, BIRD_SIZE, BIRD_SIZE);
-    ctx.fillStyle = ACCENT;
-    ctx.fillRect(BIRD_SIZE / 2 - 10, -BIRD_SIZE / 2 + 5, 6, 6);
+    ctx.rotate(Math.max(-0.4, Math.min(0.9, velocity / (900 * u))));
+    ctx.drawImage(frame, -SPRITE_W / 2, -SPRITE_H / 2, SPRITE_W, SPRITE_H);
     ctx.restore();
+
+    // arcade score
+    if (phase !== "ready") {
+      ctx.font = "900 52px -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+      ctx.textAlign = "center";
+      ctx.lineWidth = 8;
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = OUTLINE;
+      ctx.strokeText(String(score), W / 2, 96);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(String(score), W / 2, 96);
+      ctx.textAlign = "left";
+    }
   };
 
   const frame = (t: number) => {
@@ -212,7 +350,10 @@ export function playFlappy(opts: FlappyOptions): void {
     }
     const dt = lastTime ? Math.min((t - lastTime) / 1000, 1 / 30) : 0;
     lastTime = t;
-    if (phase === "playing") step(dt);
+    if (phase === "playing") {
+      elapsed += dt;
+      step(dt);
+    }
     draw();
     raf = requestAnimationFrame(frame);
   };
