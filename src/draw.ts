@@ -76,22 +76,44 @@ export function strokesSvg(
 export function runDrawingRound(opts: DrawingRoundOptions): void {
   const challenge = getChallenge(CURRENT_CHALLENGE_ID)!;
   if (opts.role === "p1") {
-    showIntroP1(challenge, opts);
+    showGate(opts, () => showIntroP1(challenge, opts));
   } else {
     const component = opts.assigned ? getComponent(challenge, opts.assigned) : undefined;
     if (!component) {
       opts.onDone(null); // old game or P1 sat out — no drawing round for P2
       return;
     }
-    showIntroP2(challenge, component, opts);
+    showGate(opts, () => showIntroP2(challenge, component, opts));
   }
 }
 
-function sitOutButton(opts: DrawingRoundOptions): HTMLElement {
-  return h(
-    "button",
-    { class: "btn-ghost btn", onclick: () => opts.onDone(null) },
-    "Sit this one out"
+// The bonus round is strictly opt-in: a clear fork before anyone sees the
+// drawing challenge. Stop here locks their side in with no drawing.
+function showGate(opts: DrawingRoundOptions, onContinue: () => void): void {
+  mount(
+    h(
+      "div",
+      { class: "screen" },
+      h(
+        "header",
+        { class: "quiz-top" },
+        wordmark(),
+        h("span", { class: "progress-label" }, "Optional")
+      ),
+      h(
+        "main",
+        { class: "centered" },
+        h("h1", { class: "display" }, "That was fun, right?"),
+        h("p", { class: "sub" }, "There's one last quick game. Twenty seconds. Entirely optional."),
+        h(
+          "div",
+          { class: "stack mt" },
+          h("button", { class: "btn btn-primary", onclick: onContinue }, "One last quick game"),
+          h("button", { class: "btn-ghost btn", onclick: () => opts.onDone(null) }, "Stop here")
+        )
+      ),
+      footerNote()
+    )
   );
 }
 
@@ -126,8 +148,7 @@ function showIntroP1(challenge: DrawingChallenge, opts: DrawingRoundOptions): vo
             "button",
             { class: "btn btn-primary", onclick: () => showDraw(challenge, b, opts) },
             capitalize(b.label)
-          ),
-          sitOutButton(opts)
+          )
         )
       ),
       footerNote()
@@ -168,8 +189,7 @@ function showIntroP2(
             "button",
             { class: "btn btn-primary", onclick: () => showDraw(challenge, component, opts) },
             `Draw ${component.label}`
-          ),
-          sitOutButton(opts)
+          )
         )
       ),
       footerNote()
