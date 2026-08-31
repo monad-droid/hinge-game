@@ -336,6 +336,75 @@ h2:focus-visible {
 
 /* ————— flappy tiebreaker ————— */
 
+/* The one deliberately loud button in the app: a slow-cycling rainbow
+   sweep, and a pop + ring burst when pressed. */
+.btn-flight {
+  position: relative;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(25, 21, 18, 0.45);
+  background: linear-gradient(
+    100deg,
+    #ff4d00,
+    #ffc233,
+    #74bf2e,
+    #2657e0,
+    #a04de0,
+    #ff4d00
+  );
+  background-size: 400% 100%;
+  animation: flight-rainbow 3.2s linear infinite;
+}
+
+@keyframes flight-rainbow {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 400% 50%;
+  }
+}
+
+.btn-flight.is-launching {
+  animation: flight-rainbow 3.2s linear infinite, flight-launch 380ms ease-out;
+}
+
+@keyframes flight-launch {
+  30% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.btn-flight.is-launching::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 3px solid #fff;
+  pointer-events: none;
+  animation: flight-ring 380ms ease-out forwards;
+}
+
+@keyframes flight-ring {
+  from {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.25, 1.9);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-flight,
+  .btn-flight.is-launching,
+  .btn-flight.is-launching::after {
+    animation: none;
+  }
+}
+
 .flappy-screen {
   padding-bottom: 0;
   /* Frantic tapping strays onto the header text; without these iOS selects

@@ -97,15 +97,20 @@ export function playFlappy(opts: FlappyOptions): void {
       h(
         "button",
         {
-          class: "btn btn-primary",
+          class: "btn btn-flight",
           onpointerdown: (e: Event) => e.stopPropagation(),
           onclick: (e: Event) => {
             e.stopPropagation();
-            startOverlay.remove();
-            phase = "ready";
+            const btn = e.currentTarget as HTMLButtonElement;
+            btn.disabled = true;
+            btn.classList.add("is-launching");
+            window.setTimeout(() => {
+              startOverlay.remove();
+              phase = "ready";
+            }, 380);
           },
         },
-        "Take flight"
+        "Play"
       ),
       h(
         "button",
