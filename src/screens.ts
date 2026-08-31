@@ -93,7 +93,10 @@ export function showLanding(opts: { onStart: () => void; onCode: (code: string) 
 
 // ————— Player 1: share & waiting —————
 
-export function showShare(code: string, opts: { fresh: boolean; onReady: () => void }): void {
+export function showShare(
+  code: string,
+  opts: { fresh: boolean; drew?: boolean; onReady: () => void }
+): void {
   const screen = h(
     "div",
     { class: "screen" },
@@ -102,10 +105,16 @@ export function showShare(code: string, opts: { fresh: boolean; onReady: () => v
       "main",
       { class: "centered" },
       opts.fresh
-        ? h("h1", { class: "display" }, "Your answers are locked.")
+        ? h("h1", { class: "display" }, "Locked in.")
         : h("h1", { class: "display" }, "Still waiting."),
       opts.fresh
-        ? h("p", { class: "sub" }, "Now send this to someone to see how you compare.")
+        ? h(
+            "p",
+            { class: "sub" },
+            opts.drew
+              ? "No idea what they're drawing. Good luck. Send this to someone to see how you compare."
+              : "Now send this to someone to see how you compare."
+          )
         : h("p", { class: "sub" }, "Typical."),
       h(
         "div",

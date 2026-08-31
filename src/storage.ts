@@ -1,7 +1,7 @@
 // localStorage helpers. This is a UX safeguard (resume after refresh, don't
 // accidentally play against yourself) — never identity or security.
 
-import type { Answer } from "../shared/types";
+import type { Answer, DrawingSubmission } from "../shared/types";
 
 const PREFIX = "debatable.";
 
@@ -46,6 +46,9 @@ export function setRole(code: string, role: Role): void {
 export interface Draft {
   answers: Answer[];
   flappy?: number | null;
+  // Set once the drawing round is finished (submission) or sat out (null);
+  // absent = not yet offered — that's what makes it one attempt per side.
+  drawing?: DrawingSubmission | null;
 }
 
 export function getDraft(key: string): Draft | null {
@@ -55,6 +58,15 @@ export function getDraft(key: string): Draft | null {
     answers: draft.answers.filter((a): a is Answer => a === 0 || a === 1),
   };
   if (typeof draft.flappy === "number" || draft.flappy === null) clean.flappy = draft.flappy;
+  if (draft.drawing === null) {
+    clean.drawing = null;
+  } else if (
+    draft.drawing &&
+    typeof draft.drawing === "object" &&
+    Array.isArray(draft.drawing.points)
+  ) {
+    clean.drawing = draft.drawing;
+  }
   return clean;
 }
 

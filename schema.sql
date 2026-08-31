@@ -12,7 +12,15 @@ CREATE TABLE IF NOT EXISTS games (
   p2_answers      TEXT,
   p2_prediction   INTEGER,
   p2_flappy       INTEGER,
-  p2_submitted_at INTEGER
+  p2_submitted_at INTEGER,
+  -- Finish the Drawing: strokes as compact JSON [[x,y,t],...] in master
+  -- coordinates. P2's component is always the opposite of P1's.
+  draw_challenge    TEXT,
+  p1_draw_component TEXT,
+  p1_draw_points    TEXT,
+  p1_draw_mulligan  INTEGER,
+  p2_draw_points    TEXT,
+  p2_draw_mulligan  INTEGER
 );
 
 CREATE INDEX IF NOT EXISTS idx_games_expires_at ON games (expires_at);

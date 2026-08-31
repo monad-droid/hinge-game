@@ -1,7 +1,8 @@
 import "./styles.css";
 import { CURRENT_PACK_ID, ENABLE_PREDICTIONS } from "../shared/config";
 import { getPack } from "../shared/packs";
-import type { Answer } from "../shared/types";
+import { getChallenge, otherComponentId } from "../shared/drawing";
+import type { Answer, DrawingSubmission } from "../shared/types";
 import { ApiFail, api } from "./api";
 import { startQuiz } from "./quiz";
 import { startReveal } from "./reveal";
@@ -45,11 +46,17 @@ function startPlayer1(): void {
   startQuiz({
     pack,
     draftKey: "p1",
-    onComplete: async (answers: Answer[], prediction: number | null, flappy: number | null) => {
-      const { code } = await api.createGame(answers, ENABLE_PREDICTIONS ? prediction : null, flappy);
+    drawing: { role: "p1" },
+    onComplete: async (
+      answers: Answer[],
+      prediction: number | null,
+      flappy: number | null,
+      drawing: DrawingSubmission | null
+    ) => {
+      const { code } = await api.createGame(answers, ENABLE_PREDICTIONS ? prediction : null, flappy, drawing);
       setRole(code, "p1");
       history.replaceState(null, "", `/g/${code}`);
-      showShare(code, { fresh: true, onReady: () => void goReveal(code) });
+      showShare(code, { fresh: true, drew: !!drawing, onReady: () => void goReveal(code) });
     },
   });
 }
@@ -75,10 +82,14 @@ async function enterGame(code: string): Promise<void> {
       showShare(code, { fresh: false, onReady: () => void goReveal(code) });
     } else {
       const draft = getDraft(`p2.${code}`);
+      const assigned =
+        status.drawChallengeId && status.drawComponent
+          ? assignedComponentFor(status.drawChallengeId, status.drawComponent)
+          : null;
       if (draft && draft.answers.length > 0) {
-        beginPlayer2(code, status.packId); // resume mid-quiz without re-intro
+        beginPlayer2(code, status.packId, assigned); // resume mid-quiz without re-intro
       } else {
-        showP2Intro({ onBegin: () => beginPlayer2(code, status.packId) });
+        showP2Intro({ onBegin: () => beginPlayer2(code, status.packId, assigned) });
       }
     }
     return;
@@ -91,14 +102,30 @@ async function enterGame(code: string): Promise<void> {
 
 // ————— Player 2 —————
 
-function beginPlayer2(code: string, packId: string): void {
+// P2 always draws the component P1 did not take. The server enforces this
+// too; this just tells the client which part to present.
+function assignedComponentFor(challengeId: string, p1Component: string): string | null {
+  const challenge = getChallenge(challengeId);
+  if (!challenge) return null;
+  return otherComponentId(challenge, p1Component);
+}
+
+function beginPlayer2(code: string, packId: string, assignedDrawComponent: string | null): void {
   const pack = getPack(packId) ?? getPack(CURRENT_PACK_ID)!;
   startQuiz({
     pack,
     draftKey: `p2.${code}`,
-    onComplete: async (answers: Answer[], prediction: number | null, flappy: number | null) => {
+    drawing: { role: "p2", assigned: assignedDrawComponent },
+    onComplete: async (
+      answers: Answer[],
+      prediction: number | null,
+      flappy: number | null,
+      drawing: DrawingSubmission | null
+    ) => {
       try {
-        await api.submitP2(code, answers, ENABLE_PREDICTIONS ? prediction : null, flappy);
+        // P2 never names a component — the server derives it from P1's.
+        const p2Drawing = drawing ? { points: drawing.points, mulligan: drawing.mulligan } : null;
+        await api.submitP2(code, answers, ENABLE_PREDICTIONS ? prediction : null, flappy, p2Drawing);
       } catch (e) {
         if (e instanceof ApiFail && e.kind === "already_settled") {
           await resolveSettledConflict(code, answers);

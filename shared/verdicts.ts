@@ -75,3 +75,20 @@ export function pickVerdict(score: number, seed: string): string {
   }
   return options[h % options.length]!;
 }
+
+// Team-drawing verdicts by score band. Jokes only — never competence claims.
+export const DRAW_VERDICTS: [number, string[]][] = [
+  [90, ["Suspiciously competent.", "Okay, that's actually good.", "Architects, apparently."]],
+  [75, ["Shockingly habitable.", "Honestly? Pretty solid.", "You might get the deposit back."]],
+  [50, ["It's technically a house.", "The vision was there.", "Some assembly issues."]],
+  [25, ["We're choosing not to involve an inspector.", "Structurally ambitious.", "Plans were not communicated."]],
+  [0, ["Condemned immediately.", "This feels personal.", "The HOA has been notified."]],
+];
+
+export function pickDrawVerdict(score: number, seed: string): string {
+  const band = DRAW_VERDICTS.find(([min]) => score >= min) ?? DRAW_VERDICTS[DRAW_VERDICTS.length - 1]!;
+  const options = band[1];
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 33 + seed.charCodeAt(i)) >>> 0;
+  return options[h % options.length]!;
+}

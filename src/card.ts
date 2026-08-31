@@ -2,11 +2,13 @@
 // size). Screenshots are the primary path; this is the deluxe option.
 
 import { PUBLIC_DOMAIN, QUESTIONS_PER_GAME } from "../shared/config";
+import type { PointTriple } from "../shared/drawing";
 
 export interface CardData {
   score: number;
   verdict: string;
   disputeTopic: string | null;
+  drawing: { p1: PointTriple[]; p2: PointTriple[]; teamScore: number } | null;
 }
 
 const W = 1080;
@@ -15,6 +17,7 @@ const PAPER = "#f6f1e7";
 const INK = "#191512";
 const ACCENT = "#ff4d00";
 const SUN = "#ffc233";
+const BLUE = "#2657e0";
 const MUTED = "rgba(25, 21, 18, 0.55)";
 
 // Wraps text; with a highlight color set, paints a marker-pen bar behind
@@ -147,6 +150,36 @@ async function renderCardPng(data: CardData): Promise<Blob> {
   ctx.fillStyle = INK;
   ctx.font = `italic 72px ${serif}`;
   wrapText(ctx, data.verdict, margin, afterTopic + 90, W - margin * 2, 88);
+
+  // Team drawing thumbnail (top-right, beside the big score)
+  if (data.drawing) {
+    const box = { x: W - margin - 300, y: 240, size: 300 };
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 6;
+    ctx.strokeRect(box.x, box.y, box.size, box.size);
+    const strokes: [PointTriple[], string][] = [
+      [data.drawing.p1, INK],
+      [data.drawing.p2, BLUE],
+    ];
+    for (const [pts, color] of strokes) {
+      if (pts.length < 2) continue;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 7;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      pts.forEach(([x, y], i) => {
+        const px = box.x + x * box.size;
+        const py = box.y + y * box.size;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.stroke();
+    }
+    ctx.fillStyle = ACCENT;
+    ctx.font = `800 30px ${sans}`;
+    drawTracked(ctx, `TEAM DRAWING: ${data.drawing.teamScore}%`, box.x, box.y + box.size + 48, 3);
+  }
 
   // Domain
   ctx.fillStyle = ACCENT;

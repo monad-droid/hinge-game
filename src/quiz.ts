@@ -2,10 +2,11 @@
 // prediction screen. Shared by Player 1 and Player 2 — only the completion
 // callback differs.
 
-import { ENABLE_MINIGAME, ENABLE_PREDICTIONS, QUESTIONS_PER_GAME } from "../shared/config";
+import { ENABLE_DRAWING, ENABLE_MINIGAME, ENABLE_PREDICTIONS, QUESTIONS_PER_GAME } from "../shared/config";
 import type { Pack } from "../shared/packs";
 import { PREDICTION_FLAVOR } from "../shared/verdicts";
-import type { Answer } from "../shared/types";
+import type { Answer, DrawingSubmission } from "../shared/types";
+import { runDrawingRound } from "./draw";
 import { playFlappy } from "./flappy";
 import { clearDraft, getDraft, setDraft } from "./storage";
 import { h, mount, toast, wordmark } from "./ui";
@@ -13,10 +14,17 @@ import { h, mount, toast, wordmark } from "./ui";
 export interface QuizOptions {
   pack: Pack;
   draftKey: string;
-  // Called once the whole side is locked in: answers, prediction (when
-  // enabled) and the tiebreaker score (null if skipped/disabled). Must
-  // submit to the server; throws propagate back to a retry UI.
-  onComplete: (answers: Answer[], prediction: number | null, flappy: number | null) => Promise<void>;
+  // Finish the Drawing role: P1 chooses their component; P2 receives the
+  // one P1 didn't take (assigned null = no drawing round, e.g. old games).
+  drawing: { role: "p1" } | { role: "p2"; assigned: string | null };
+  // Called once the whole side is locked in. Must submit to the server;
+  // throws propagate back to a retry UI.
+  onComplete: (
+    answers: Answer[],
+    prediction: number | null,
+    flappy: number | null,
+    drawing: DrawingSubmission | null
+  ) => Promise<void>;
 }
 
 export function startQuiz(opts: QuizOptions): void {
@@ -38,9 +46,11 @@ export function startQuiz(opts: QuizOptions): void {
 function afterAnswers(
   opts: QuizOptions,
   answers: Answer[],
-  flappyMemo?: number | null
+  flappyMemo?: number | null,
+  drawingMemo?: DrawingSubmission | null
 ): void {
-  const flappy = flappyMemo !== undefined ? flappyMemo : getDraft(opts.draftKey)?.flappy;
+  const draft = getDraft(opts.draftKey);
+  const flappy = flappyMemo !== undefined ? flappyMemo : draft?.flappy;
   if (ENABLE_MINIGAME && flappy === undefined) {
     playFlappy({
       onDone: (score) => {
@@ -50,11 +60,30 @@ function afterAnswers(
     });
     return;
   }
-  const settled = flappy === undefined ? null : flappy;
+  const settledFlappy = flappy === undefined ? null : flappy;
+
+  // Finish the Drawing: one round per side, remembered like the flappy
+  // attempt (memory first, draft as refresh-resume backup).
+  const drawing = drawingMemo !== undefined ? drawingMemo : draft?.drawing;
+  if (ENABLE_DRAWING && drawing === undefined && (opts.drawing.role === "p1" || opts.drawing.assigned)) {
+    runDrawingRound({
+      role: opts.drawing.role,
+      assigned: opts.drawing.role === "p2" ? opts.drawing.assigned ?? undefined : undefined,
+      onDone: (result) => {
+        setDraft(opts.draftKey, { answers, flappy: settledFlappy, drawing: result });
+        afterAnswers(opts, answers, settledFlappy, result);
+      },
+    });
+    return;
+  }
+  const settledDrawing = drawing === undefined ? null : drawing;
+
   if (ENABLE_PREDICTIONS) {
-    showPrediction(opts, answers, settled);
+    showPrediction(opts, answers, settledFlappy, settledDrawing);
   } else {
-    void submit(opts, answers, null, settled, () => afterAnswers(opts, answers, settled));
+    void submit(opts, answers, null, settledFlappy, settledDrawing, () =>
+      afterAnswers(opts, answers, settledFlappy, settledDrawing)
+    );
   }
 }
 
@@ -128,7 +157,12 @@ function showQuestion(opts: QuizOptions, answers: Answer[]): void {
   });
 }
 
-function showPrediction(opts: QuizOptions, answers: Answer[], flappy: number | null): void {
+function showPrediction(
+  opts: QuizOptions,
+  answers: Answer[],
+  flappy: number | null,
+  drawing: DrawingSubmission | null
+): void {
   let selected: number | null = null;
 
   const flavor = h("p", { class: "tally-flavor", "aria-live": "polite" }, " ");
@@ -165,7 +199,7 @@ function showPrediction(opts: QuizOptions, answers: Answer[], flappy: number | n
     if (selected === null) return;
     lockBtn.setAttribute("disabled", "");
     lockBtn.textContent = "Locking…";
-    await submit(opts, answers, selected, flappy, () => showPrediction(opts, answers, flappy));
+    await submit(opts, answers, selected, flappy, drawing, () => showPrediction(opts, answers, flappy, drawing));
   };
 
   mount(
@@ -196,10 +230,11 @@ async function submit(
   answers: Answer[],
   prediction: number | null,
   flappy: number | null,
+  drawing: DrawingSubmission | null,
   retryScreen: () => void
 ): Promise<void> {
   try {
-    await opts.onComplete(answers, prediction, flappy);
+    await opts.onComplete(answers, prediction, flappy, drawing);
     clearDraft(opts.draftKey);
   } catch {
     // Completion handlers throw only for retryable failures (network etc.);

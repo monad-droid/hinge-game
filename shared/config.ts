@@ -14,6 +14,10 @@ export const ENABLE_PREDICTIONS = false;
 export const ENABLE_MINIGAME = true;
 export const FLAPPY_MAX_SCORE = 9999;
 
+// Finish the Drawing: the collaborative bonus round after the questions.
+// Off removes it from the flow; stored strokes are simply ignored.
+export const ENABLE_DRAWING = true;
+
 // The question pack every new game is created from — the one live question
 // list. Existing games keep the pack they were created with, so bumping
 // this never rewrites an old game's reveal.

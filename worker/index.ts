@@ -4,12 +4,23 @@ import {
   CODE_ALPHABET,
   CODE_LENGTH,
   CURRENT_PACK_ID,
+  ENABLE_DRAWING,
   ENABLE_MINIGAME,
   ENABLE_PREDICTIONS,
   FLAPPY_MAX_SCORE,
   GAME_EXPIRATION_DAYS,
   QUESTIONS_PER_GAME,
 } from "../shared/config";
+import {
+  CURRENT_CHALLENGE_ID,
+  getChallenge,
+  getComponent,
+  otherComponentId,
+  sanitizeStroke,
+  teamScore,
+  triplesToPoints,
+} from "../shared/drawing";
+import type { PointTriple } from "../shared/drawing";
 import { getPack } from "../shared/packs";
 import type {
   Answer,
@@ -37,6 +48,12 @@ interface GameRow {
   p2_prediction: number | null;
   p2_flappy: number | null;
   p2_submitted_at: number | null;
+  draw_challenge: string | null;
+  p1_draw_component: string | null;
+  p1_draw_points: string | null;
+  p1_draw_mulligan: number | null;
+  p2_draw_points: string | null;
+  p2_draw_mulligan: number | null;
 }
 
 const app = new Hono<{ Bindings: Env }>();
@@ -95,6 +112,38 @@ function parseFlappy(value: unknown): { ok: boolean; flappy: number | null } {
   return { ok: false, flappy: null };
 }
 
+// Finish the Drawing submissions. Returns ok:false only for actively
+// malformed payloads; a null/absent drawing (sat out / feature off / old
+// client) is valid and stores nothing. Player 1 must name a real component
+// of the current challenge; Player 2 never chooses (the server assigns the
+// opposite of Player 1's, and rejects any attempt to claim one).
+function parseDrawing(
+  value: unknown,
+  role: "p1" | "p2"
+): { ok: boolean; component: string | null; points: string | null; mulligan: number | null } {
+  const none = { ok: true, component: null, points: null, mulligan: null };
+  if (!ENABLE_DRAWING || value === null || value === undefined) return none;
+  if (typeof value !== "object") return { ...none, ok: false };
+  const { component, points, mulligan } = value as Record<string, unknown>;
+  const challenge = getChallenge(CURRENT_CHALLENGE_ID)!;
+  if (role === "p1") {
+    if (typeof component !== "string" || !getComponent(challenge, component)) {
+      return { ...none, ok: false };
+    }
+  } else if (component !== undefined && component !== null) {
+    // P2 may not pick a component — theirs is derived server-side.
+    return { ...none, ok: false };
+  }
+  const cleaned = sanitizeStroke(points);
+  if (!cleaned) return { ...none, ok: false };
+  return {
+    ok: true,
+    component: role === "p1" ? (component as string) : null,
+    points: JSON.stringify(cleaned),
+    mulligan: mulligan === true ? 1 : 0,
+  };
+}
+
 function serializeAnswers(answers: Answer[]): string {
   return answers.join("");
 }
@@ -138,6 +187,8 @@ app.post("/api/games", async (c) => {
   if (!ok) return err(c, 400, "bad_request", "Prediction must be an integer from 0 to 7.");
   const flappyParsed = parseFlappy(rawFlappy);
   if (!flappyParsed.ok) return err(c, 400, "bad_request", "Tiebreaker score is invalid.");
+  const drawParsed = parseDrawing((body as Record<string, unknown>).drawing, "p1");
+  if (!drawParsed.ok) return err(c, 400, "bad_request", "Drawing payload is invalid.");
 
   const pack = getPack(CURRENT_PACK_ID);
   if (!pack) return err(c, 500, "bad_request", "No question pack configured.");
@@ -151,10 +202,15 @@ app.post("/api/games", async (c) => {
     const code = generateCode();
     try {
       await c.env.DB.prepare(
-        `INSERT INTO games (code, pack_id, created_at, expires_at, p1_answers, p1_prediction, p1_flappy, p1_submitted_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO games (code, pack_id, created_at, expires_at, p1_answers, p1_prediction, p1_flappy, p1_submitted_at,
+                            draw_challenge, p1_draw_component, p1_draw_points, p1_draw_mulligan)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-        .bind(code, pack.id, now, expiresAt, serializeAnswers(answers), prediction, flappyParsed.flappy, now)
+        .bind(
+          code, pack.id, now, expiresAt, serializeAnswers(answers), prediction, flappyParsed.flappy, now,
+          drawParsed.points ? CURRENT_CHALLENGE_ID : null,
+          drawParsed.component, drawParsed.points, drawParsed.mulligan
+        )
         .run();
       return c.json<CreateGameResponse>({ code }, 201);
     } catch (e) {
@@ -180,6 +236,8 @@ app.get("/api/games/:code", async (c) => {
     packId: row.pack_id,
     state: stateOf(row),
     expiresAt: row.expires_at,
+    drawChallengeId: row.draw_challenge ?? null,
+    drawComponent: row.p1_draw_component ?? null,
   });
 });
 
@@ -205,6 +263,8 @@ app.post("/api/games/:code/p2", async (c) => {
   if (!ok) return err(c, 400, "bad_request", "Prediction must be an integer from 0 to 7.");
   const flappyParsed = parseFlappy(rawFlappy);
   if (!flappyParsed.ok) return err(c, 400, "bad_request", "Tiebreaker score is invalid.");
+  const drawParsed = parseDrawing((body as Record<string, unknown>).drawing, "p2");
+  if (!drawParsed.ok) return err(c, 400, "bad_request", "Drawing payload is invalid.");
 
   const row = await loadGame(c.env.DB, code);
   if (!row) return err(c, 404, "not_found", "That debate doesn't exist.");
@@ -213,11 +273,17 @@ app.post("/api/games/:code/p2", async (c) => {
     return err(c, 409, "already_settled", "Looks like this one is already settled.");
   }
 
+  // A P2 drawing only counts when P1 actually drew (otherwise there is no
+  // assigned component and no combined result to make).
+  const p2DrawPoints = row.p1_draw_points ? drawParsed.points : null;
+  const p2DrawMulligan = p2DrawPoints ? drawParsed.mulligan : null;
+
   const result = await c.env.DB.prepare(
-    `UPDATE games SET p2_answers = ?, p2_prediction = ?, p2_flappy = ?, p2_submitted_at = ?
+    `UPDATE games SET p2_answers = ?, p2_prediction = ?, p2_flappy = ?, p2_submitted_at = ?,
+                      p2_draw_points = ?, p2_draw_mulligan = ?
      WHERE code = ? AND p2_submitted_at IS NULL`
   )
-    .bind(serializeAnswers(answers), prediction, flappyParsed.flappy, Date.now(), code)
+    .bind(serializeAnswers(answers), prediction, flappyParsed.flappy, Date.now(), p2DrawPoints, p2DrawMulligan, code)
     .run();
 
   if (!result.meta.changes) {
@@ -259,8 +325,40 @@ app.get("/api/games/:code/reveal", async (c) => {
       flappy: ENABLE_MINIGAME ? row.p2_flappy : null,
     },
     score,
+    drawing: buildDrawingReveal(row),
   });
 });
+
+// Both strokes leave the server ONLY here (inside the completed-game
+// reveal), combined with the single deterministic team score.
+function buildDrawingReveal(row: GameRow): RevealResponse["drawing"] {
+  if (!ENABLE_DRAWING) return null;
+  if (!row.draw_challenge || !row.p1_draw_component || !row.p1_draw_points || !row.p2_draw_points) {
+    return null;
+  }
+  const challenge = getChallenge(row.draw_challenge);
+  if (!challenge) return null;
+  let p1Points: PointTriple[];
+  let p2Points: PointTriple[];
+  try {
+    p1Points = JSON.parse(row.p1_draw_points) as PointTriple[];
+    p2Points = JSON.parse(row.p2_draw_points) as PointTriple[];
+  } catch {
+    return null; // malformed stored stroke — omit the section rather than crash
+  }
+  if (!Array.isArray(p1Points) || !Array.isArray(p2Points)) return null;
+  const p2Component = otherComponentId(challenge, row.p1_draw_component);
+  const score = teamScore(challenge, [
+    { componentId: row.p1_draw_component, points: triplesToPoints(p1Points) },
+    { componentId: p2Component, points: triplesToPoints(p2Points) },
+  ]);
+  return {
+    challengeId: challenge.id,
+    p1: { component: row.p1_draw_component, points: p1Points },
+    p2: { component: p2Component, points: p2Points },
+    teamScore: score,
+  };
+}
 
 app.all("/api/*", (c) => err(c, 404, "not_found", "No such endpoint."));
 

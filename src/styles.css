@@ -504,6 +504,178 @@ h2:focus-visible {
   animation: screen-in 200ms ease-out both;
 }
 
+/* ————— finish the drawing ————— */
+
+.ref-frame {
+  border: 2px solid var(--ink);
+  background: #fffdf8;
+  aspect-ratio: 1;
+  max-width: 240px;
+  margin: 1.1rem 0 0;
+}
+
+.ref-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ref-line {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2.4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.ref-line-dim {
+  stroke: rgba(25, 21, 18, 0.18);
+}
+
+.draw-screen {
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.draw-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0.75rem 0 1rem;
+}
+
+.draw-stage {
+  position: relative;
+  border: 2px solid var(--ink);
+  background: #fffdf8;
+  aspect-ratio: 1;
+  width: 100%;
+  max-width: 420px;
+  margin: 0.9rem auto 0;
+  /* Drawing must never fight scrolling or double-tap zoom. */
+  touch-action: none;
+}
+
+.draw-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.start-dot {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: 50%;
+  background: var(--accent);
+  pointer-events: none;
+  animation: dot-pulse 1.3s ease-in-out infinite;
+}
+
+.start-dot-hidden {
+  display: none;
+}
+
+@keyframes dot-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(255, 77, 0, 0.45);
+  }
+  50% {
+    transform: scale(1.25);
+    box-shadow: 0 0 0 9px rgba(255, 77, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .start-dot {
+    animation: none;
+  }
+}
+
+/* the combined-drawing reveal */
+.combined-frame {
+  border: 2px solid var(--ink);
+  background: #fffdf8;
+  aspect-ratio: 1;
+  width: 100%;
+  max-width: 420px;
+  margin: 1rem auto;
+}
+
+.stroke-p1 {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2.6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.stroke-p2 {
+  fill: none;
+  stroke: var(--blue);
+  stroke-width: 2.6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.stroke-animate {
+  animation: stroke-draw 900ms ease-out forwards;
+}
+
+@keyframes stroke-draw {
+  from {
+    stroke-dashoffset: var(--stroke-len);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stroke-animate {
+    animation: none;
+    stroke-dashoffset: 0 !important;
+  }
+}
+
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 1rem;
+}
+
+.compare-cell .kicker {
+  margin-bottom: 0.4rem;
+}
+
+.compare-cell .ref-frame {
+  max-width: none;
+  margin: 0;
+}
+
+/* mini combined drawing on the share card */
+.card-draw-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.card-draw-thumb {
+  width: 84px;
+  height: 84px;
+  flex: none;
+  border: 2px solid var(--ink);
+  background: #fffdf8;
+}
+
 /* ————— prediction ————— */
 
 .tally {

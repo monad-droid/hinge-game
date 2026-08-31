@@ -157,6 +157,38 @@ from, and both are gated:
   Worker's `scheduled()` handler, which `DELETE`s expired rows so the table
   doesn't grow forever.
 
+## Finish the Drawing
+
+After the questions (and flappy round), each pair collaborates on one
+drawing: Player 1 picks a component of the reference object (house_v1:
+roof or house), Player 2 automatically gets the other, and each recreates
+their part in ONE continuous stroke — with one accidental-lift mulligan,
+a voluntary Restart before locking, and no eraser/undo. Neither player
+sees the other's stroke; both drawings leave the server only inside the
+completed-game reveal, where they're combined untouched in the shared
+master coordinate system and given ONE team score.
+
+**Scoring** (`shared/drawing.ts`, tested in `tests/drawing.test.ts`):
+both reference components and both player strokes are resampled to
+uniform point sets in the master unit square; the combined player set is
+compared to the combined reference with a symmetric Chamfer distance
+(average nearest-neighbor distance in both directions, so missed target
+areas and stray ink both count); the error maps to 0–100 via
+`100·exp(−(err/0.05)^1.35)`, calibrated so perfect traces score ~98,
+recognizable wobble 75–90, misplaced-but-plausible 50–75, and chaos or a
+missing component lands under 40. Deterministic — the Worker computes it
+at reveal time; no score column is stored.
+
+**Adding another challenge later**: add an entry to `CHALLENGES` in
+`shared/drawing.ts` — two components whose `referencePath` polylines are
+each drawable in one stroke and share the master 0..1 square — then point
+`CURRENT_CHALLENGE_ID` at it. Existing games store their `challengeId`
+and keep rendering with the challenge they were played on. Candidates:
+ice cream (scoops + cone), boat (hull + sail), tree (canopy + trunk).
+
+**Databases created before this feature** need the stroke columns once:
+`npm run db:migrate-drawing:remote` (and `:local` for dev).
+
 ## How to add another question pack later
 
 1. Add an entry to `PACKS` in `shared/packs.ts`:

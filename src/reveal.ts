@@ -5,9 +5,11 @@
 import { ENABLE_PREDICTIONS, PUBLIC_DOMAIN, QUESTIONS_PER_GAME } from "../shared/config";
 import { getPack } from "../shared/packs";
 import type { Pack, Question } from "../shared/packs";
-import { pickVerdict, predictionReaction } from "../shared/verdicts";
+import { pickDrawVerdict, pickVerdict, predictionReaction } from "../shared/verdicts";
+import { getChallenge } from "../shared/drawing";
 import type { RevealResponse } from "../shared/types";
 import { saveCardImage } from "./card";
+import { referenceSvg, strokesSvg } from "./draw";
 import { h, mount, toast, wordmark } from "./ui";
 
 const DISPUTE_FLAVOR = [
@@ -166,7 +168,9 @@ function showCard(ctx: RevealContext, index: number): void {
               ? "The predictions"
               : hasTiebreaker(ctx)
                 ? "The flappy results"
-                : "The verdict"
+                : ctx.data.drawing
+                  ? "One more thing\u2026"
+                  : "The verdict"
         )
       )
     )
@@ -189,6 +193,14 @@ function hasTiebreaker(ctx: RevealContext): boolean {
 function afterPredictions(ctx: RevealContext): void {
   if (hasTiebreaker(ctx)) {
     showTiebreaker(ctx);
+  } else {
+    afterTiebreaker(ctx);
+  }
+}
+
+function afterTiebreaker(ctx: RevealContext): void {
+  if (ctx.data.drawing) {
+    showDrawTease(ctx);
   } else {
     showFinal(ctx);
   }
@@ -227,6 +239,153 @@ function showTiebreaker(ctx: RevealContext): void {
         tiebreakerRow(ctx.youLabel, you),
         tiebreakerRow(ctx.themLabel, them),
         h("p", { class: "flavor" }, tiebreakerLine(you, them))
+      ),
+      h(
+        "div",
+        { class: "stack" },
+        h(
+          "button",
+          { class: "btn btn-primary", onclick: () => afterTiebreaker(ctx) },
+          ctx.data.drawing ? "One more thing\u2026" : "The verdict"
+        )
+      )
+    )
+  );
+}
+
+// ——— Finish the Drawing reveal: tease → staged combined drawing → compare ———
+
+function showDrawTease(ctx: RevealContext): void {
+  mount(
+    h(
+      "div",
+      { class: "screen" },
+      h("header", { class: "landing-top" }, wordmark()),
+      h(
+        "main",
+        { class: "centered" },
+        h("h1", { class: "kicker" }, "One more thing\u2026"),
+        h("p", { class: "display", style: "font-family: var(--serif); font-style: italic; font-size: clamp(2.2rem, 9vw, 3.2rem); margin: 0" }, "Remember that drawing?")
+      ),
+      h(
+        "div",
+        { class: "stack" },
+        h("button", { class: "btn btn-primary", onclick: () => showDrawReveal(ctx) }, "See what you made")
+      )
+    )
+  );
+}
+
+function showDrawReveal(ctx: RevealContext): void {
+  const drawing = ctx.data.drawing!;
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const verdict = pickDrawVerdict(drawing.teamScore, ctx.data.code);
+
+  const svg = strokesSvg([
+    { points: drawing.p1.points, className: "stroke-p1" },
+    { points: drawing.p2.points, className: "stroke-p2" },
+  ]);
+  const frame = h("div", { class: "combined-frame" });
+  frame.append(svg);
+
+  const caption = h("h1", { class: "kicker", style: "visibility: hidden" }, "You built this");
+  const scoreLine = h(
+    "p",
+    { class: "score-huge", style: "visibility: hidden; font-size: clamp(3rem, 18vw, 5rem); margin: 0" },
+    "0%"
+  );
+  const scoreLabel = h("p", { class: "kicker", style: "visibility: hidden; margin-top: 0.2rem" }, "Team score");
+  const verdictLine = h(
+    "p",
+    { class: "verdict-line", style: "visibility: hidden" },
+    h("span", { class: "hl" }, verdict)
+  );
+  const nextBtn = h(
+    "button",
+    { class: "btn btn-primary", style: "visibility: hidden", onclick: () => showDrawCompare(ctx) },
+    "The plan vs. reality"
+  );
+
+  mount(
+    h(
+      "div",
+      { class: "screen" },
+      h("header", { class: "landing-top" }, wordmark()),
+      h("main", { class: "centered", style: "justify-content: flex-start; padding-top: 0.5rem" }, caption, frame, scoreLine, scoreLabel, verdictLine),
+      h("div", { class: "stack" }, nextBtn)
+    )
+  );
+
+  // Stage the strokes: P1's part draws itself in, then P2's, then the
+  // caption, count-up team score, verdict.
+  const lines = Array.from(svg.querySelectorAll("polyline"));
+  const durations = [900, 900];
+  let delay = reduced ? 0 : 250;
+  lines.forEach((line, i) => {
+    const len = (line as SVGPolylineElement).getTotalLength();
+    line.style.strokeDasharray = String(len);
+    if (reduced) {
+      line.style.strokeDashoffset = "0";
+      return;
+    }
+    line.style.strokeDashoffset = String(len);
+    line.style.setProperty("--stroke-len", String(len));
+    window.setTimeout(() => line.classList.add("stroke-animate"), delay);
+    delay += durations[i] ?? 900;
+  });
+
+  const showResults = () => {
+    caption.style.visibility = "visible";
+    scoreLine.style.visibility = "visible";
+    scoreLabel.style.visibility = "visible";
+    const target = drawing.teamScore;
+    const durationMs = reduced ? 0 : 1100;
+    const started = performance.now();
+    const tick = () => {
+      const f = durationMs === 0 ? 1 : Math.min(1, (performance.now() - started) / durationMs);
+      const eased = 1 - Math.pow(1 - f, 3);
+      scoreLine.textContent = `${Math.round(target * eased)}%`;
+      if (f < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        verdictLine.style.visibility = "visible";
+        nextBtn.style.visibility = "visible";
+      }
+    };
+    tick();
+  };
+  window.setTimeout(showResults, reduced ? 0 : delay + 400);
+}
+
+function showDrawCompare(ctx: RevealContext): void {
+  const drawing = ctx.data.drawing!;
+  const challenge = getChallenge(drawing.challengeId);
+  const combined = strokesSvg([
+    { points: drawing.p1.points, className: "stroke-p1" },
+    { points: drawing.p2.points, className: "stroke-p2" },
+  ]);
+  const combinedFrame = h("div", { class: "ref-frame" });
+  combinedFrame.append(combined);
+
+  const planFrame = h("div", { class: "ref-frame" });
+  if (challenge) planFrame.append(referenceSvg(challenge));
+
+  mount(
+    h(
+      "div",
+      { class: "screen" },
+      h("header", { class: "landing-top" }, wordmark()),
+      h(
+        "main",
+        { class: "centered" },
+        h("h1", { class: "kicker" }, "For the record"),
+        h(
+          "div",
+          { class: "compare-grid" },
+          h("div", { class: "compare-cell" }, h("p", { class: "kicker" }, "The plan"), planFrame),
+          h("div", { class: "compare-cell" }, h("p", { class: "kicker" }, "What you built"), combinedFrame)
+        ),
+        h("p", { class: "flavor" }, "This seems worth discussing.")
       ),
       h(
         "div",
@@ -316,6 +475,29 @@ function showFinal(ctx: RevealContext): void {
 
 function showShareCard(ctx: RevealContext): void {
   const dispute = featuredDispute(ctx);
+  const drawing = ctx.data.drawing;
+
+  let drawRow: HTMLElement | null = null;
+  if (drawing) {
+    const thumb = h("div", { class: "card-draw-thumb" });
+    thumb.append(
+      strokesSvg([
+        { points: drawing.p1.points, className: "stroke-p1" },
+        { points: drawing.p2.points, className: "stroke-p2" },
+      ])
+    );
+    drawRow = h(
+      "div",
+      { class: "card-draw-row" },
+      thumb,
+      h(
+        "div",
+        null,
+        h("span", { class: "side-who" }, "Team drawing"),
+        h("div", { class: "card-dispute-topic" }, `${drawing.teamScore}%`)
+      )
+    );
+  }
 
   const card = h(
     "div",
@@ -339,6 +521,7 @@ function showShareCard(ctx: RevealContext): void {
             h("div", { class: "card-dispute-topic" }, h("span", { class: "hl" }, "None. Which is somehow worse."))
           )
     ),
+    drawRow,
     h("p", { class: "card-verdict" }, ctx.verdict),
     h("span", { class: "card-domain" }, PUBLIC_DOMAIN)
   );
@@ -367,6 +550,9 @@ function showShareCard(ctx: RevealContext): void {
                 score: ctx.data.score,
                 verdict: ctx.verdict,
                 disputeTopic: dispute ? dispute.topic : null,
+                drawing: drawing
+                  ? { p1: drawing.p1.points, p2: drawing.p2.points, teamScore: drawing.teamScore }
+                  : null,
               }).catch(() => toast("Couldn't render the image. Screenshot works.")),
           },
           "Save image"
