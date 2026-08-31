@@ -76,7 +76,7 @@ function showOpener(ctx: RevealContext): void {
         { class: "centered" },
         h("h1", { class: "kicker" }, "The results are in"),
         scoreEl(ctx.data.score, "score-huge"),
-        h("p", { class: "verdict-line" }, ctx.verdict)
+        h("p", { class: "verdict-line" }, h("span", { class: "hl" }, ctx.verdict))
       ),
       h(
         "div",
@@ -117,7 +117,7 @@ function showCard(ctx: RevealContext, index: number): void {
         h("span", { class: "tag tag-same" }, "Same side"),
         h("h1", { class: "question-text" }, question.prompt),
         h("p", { class: "kicker chose-label" }, "You both chose:"),
-        h("p", { class: "chosen-answer" }, question.choices[yourAnswer(ctx, index) as 0 | 1]),
+        h("p", { class: "chosen-answer" }, h("span", { class: "hl" }, question.choices[yourAnswer(ctx, index) as 0 | 1])),
       ]
     : [
         h("span", { class: "tag tag-dispute" }, "Dispute detected"),
@@ -165,7 +165,7 @@ function showCard(ctx: RevealContext, index: number): void {
             : hasPredictions(ctx)
               ? "The predictions"
               : hasTiebreaker(ctx)
-                ? "The tiebreaker"
+                ? "The flappy results"
                 : "The verdict"
         )
       )
@@ -223,7 +223,7 @@ function showTiebreaker(ctx: RevealContext): void {
       h(
         "main",
         { class: "centered" },
-        h("h1", { class: "kicker" }, "The tiebreaker"),
+        h("h1", { class: "kicker" }, "Flappy results"),
         tiebreakerRow(ctx.youLabel, you),
         tiebreakerRow(ctx.themLabel, them),
         h("p", { class: "flavor" }, tiebreakerLine(you, them))
@@ -275,7 +275,7 @@ function showPredictions(ctx: RevealContext): void {
         h(
           "button",
           { class: "btn btn-primary", onclick: () => afterPredictions(ctx) },
-          hasTiebreaker(ctx) ? "The tiebreaker" : "The verdict"
+          hasTiebreaker(ctx) ? "The flappy results" : "The verdict"
         )
       )
     )
@@ -302,7 +302,7 @@ function showFinal(ctx: RevealContext): void {
         h("h1", { class: "kicker" }, "Final verdict"),
         scoreEl(ctx.data.score, "score-huge"),
         h("p", { class: "sub" }, `${ctx.data.score} of ${QUESTIONS_PER_GAME} aligned.`),
-        h("p", { class: "verdict-line" }, ctx.verdict)
+        h("p", { class: "verdict-line" }, h("span", { class: "hl" }, ctx.verdict))
       ),
       h(
         "div",
@@ -330,13 +330,13 @@ function showShareCard(ctx: RevealContext): void {
             "div",
             null,
             h("span", { class: "side-who" }, "But apparently we need to discuss"),
-            h("div", { class: "card-dispute-topic" }, dispute.topic)
+            h("div", { class: "card-dispute-topic" }, h("span", { class: "hl" }, dispute.topic))
           )
         : h(
             "div",
             null,
             h("span", { class: "side-who" }, "Disputes detected"),
-            h("div", { class: "card-dispute-topic" }, "None. Which is somehow worse.")
+            h("div", { class: "card-dispute-topic" }, h("span", { class: "hl" }, "None. Which is somehow worse."))
           )
     ),
     h("p", { class: "card-verdict" }, ctx.verdict),
