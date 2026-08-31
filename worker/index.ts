@@ -372,6 +372,12 @@ app.all("*", async (c) => {
   const headers = new Headers(res.headers);
   if (contentType.includes("text/html")) {
     headers.set("Cache-Control", "no-cache, must-revalidate");
+    // Standard hygiene headers — also the signals reputation scanners
+    // expect from a well-behaved site.
+    headers.set("X-Content-Type-Options", "nosniff");
+    headers.set("X-Frame-Options", "DENY");
+    headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+    headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   } else if (new URL(c.req.url).pathname.startsWith("/assets/")) {
     headers.set("Cache-Control", "public, max-age=31536000, immutable");
   }
