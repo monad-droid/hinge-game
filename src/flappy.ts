@@ -180,8 +180,9 @@ export function playFlappy(opts: FlappyOptions): void {
 
   // ——— state ———
   // intro: brand overlay with the start button. ready: overlay gone, bird
-  // bobbing, waiting for the first tap. Then playing → dead.
-  type Phase = "intro" | "ready" | "playing" | "dead";
+  // bobbing, waiting for the first tap. Then playing → dead, with paused
+  // in between if the OS interrupts (notification, call, tab switch).
+  type Phase = "intro" | "ready" | "playing" | "paused" | "dead";
   let phase: Phase = "intro";
   const restY = H * 0.42;
   let birdY = restY;
@@ -201,8 +202,14 @@ export function playFlappy(opts: FlappyOptions): void {
 
   const flap = () => {
     if (phase === "intro") return; // taps do nothing until Take flight
-    if (phase === "ready") phase = "playing";
+    if (phase === "ready" || phase === "paused") phase = "playing";
     if (phase === "playing") velocity = FLAP;
+  };
+
+  // An interruption mid-run (notification banner, incoming call, app
+  // switch) pauses instead of letting the bird die off-screen.
+  const pauseIfPlaying = () => {
+    if (phase === "playing") phase = "paused";
   };
 
   const die = () => {
@@ -351,16 +358,17 @@ export function playFlappy(opts: FlappyOptions): void {
     ctx.drawImage(frame, -SPRITE_W / 2, -SPRITE_H / 2, SPRITE_W, SPRITE_H);
     ctx.restore();
 
-    // get-ready hint
-    if (phase === "ready") {
+    // get-ready / paused hint
+    if (phase === "ready" || phase === "paused") {
+      const hint = phase === "ready" ? "TAP TO FLAP" : "PAUSED — TAP";
       ctx.font = "900 34px -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
       ctx.textAlign = "center";
       ctx.lineWidth = 7;
       ctx.lineJoin = "round";
       ctx.strokeStyle = OUTLINE;
-      ctx.strokeText("TAP TO FLAP", W / 2, H * 0.62);
+      ctx.strokeText(hint, W / 2, H * 0.62);
       ctx.fillStyle = "#ffffff";
-      ctx.fillText("TAP TO FLAP", W / 2, H * 0.62);
+      ctx.fillText(hint, W / 2, H * 0.62);
       ctx.textAlign = "left";
     }
 
@@ -409,11 +417,15 @@ export function playFlappy(opts: FlappyOptions): void {
   };
   stage.addEventListener("pointerdown", onPointer);
   window.addEventListener("keydown", onKey);
+  document.addEventListener("visibilitychange", pauseIfPlaying);
+  window.addEventListener("blur", pauseIfPlaying);
 
   const cleanup = () => {
     cancelAnimationFrame(raf);
     stage.removeEventListener("pointerdown", onPointer);
     window.removeEventListener("keydown", onKey);
+    document.removeEventListener("visibilitychange", pauseIfPlaying);
+    window.removeEventListener("blur", pauseIfPlaying);
   };
   onScreenExit(cleanup);
 }

@@ -332,6 +332,14 @@ h2:focus-visible {
 
 .flappy-screen {
   padding-bottom: 0;
+  /* Frantic tapping strays onto the header text; without these iOS selects
+     it and pops the Copy/Look-Up callout mid-flight, which reads as a
+     "notification" and kills the run. No selection, no callouts, no
+     double-tap zoom anywhere on the game screen. */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .flappy-stage {
@@ -339,6 +347,7 @@ h2:focus-visible {
   flex: 1;
   margin: 0.75rem -24px 0;
   overflow: hidden;
+  touch-action: none;
 }
 
 .flappy-canvas {
