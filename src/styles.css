@@ -407,7 +407,7 @@ h2:focus-visible {
 .spark {
   position: absolute;
   pointer-events: none;
-  z-index: 2;
+  z-index: 5;
 }
 
 .spark-streak {
@@ -421,6 +421,7 @@ h2:focus-visible {
 
 .boom-flash {
   position: absolute;
+  z-index: 6;
   width: 180px;
   height: 180px;
   border-radius: 50%;
@@ -431,6 +432,7 @@ h2:focus-visible {
 
 .boom-ring {
   position: absolute;
+  z-index: 5;
   width: 160px;
   height: 160px;
   border-radius: 50%;

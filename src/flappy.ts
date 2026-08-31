@@ -99,26 +99,28 @@ function explodeButton(container: HTMLElement, btn: HTMLElement): void {
   flash.className = "boom-flash";
   flash.style.cssText = `left:${cx}px;top:${cy}px`;
   container.append(flash);
-  flash.animate(
+  const flashAnim = flash.animate(
     [
       { transform: "translate(-50%, -50%) scale(0.2)", opacity: 1 },
       { transform: "translate(-50%, -50%) scale(2.6)", opacity: 0 },
     ],
     { duration: 320, easing: "ease-out", fill: "forwards" }
   );
+  flashAnim.onfinish = () => flash.remove();
 
   // circular shockwave
   const ring = document.createElement("span");
   ring.className = "boom-ring";
   ring.style.cssText = `left:${cx}px;top:${cy}px`;
   container.append(ring);
-  ring.animate(
+  const ringAnim = ring.animate(
     [
       { transform: "translate(-50%, -50%) scale(0.2)", opacity: 1 },
       { transform: "translate(-50%, -50%) scale(3.4)", opacity: 0 },
     ],
     { duration: 550, easing: "cubic-bezier(0.16, 0.85, 0.35, 1)", fill: "forwards" }
   );
+  ringAnim.onfinish = () => ring.remove();
 
   // screen shake
   container.animate(
@@ -155,7 +157,7 @@ function explodeButton(container: HTMLElement, btn: HTMLElement): void {
     const dx = Math.cos(angle) * dist;
     const dy = Math.sin(angle) * dist;
     const spin = (Math.random() - 0.5) * 900;
-    shard.animate(
+    const anim = shard.animate(
       [
         { transform: "translate(0, 0) rotate(0deg)", opacity: 1 },
         { transform: `translate(${dx}px, ${dy}px) rotate(${spin}deg)`, opacity: 1, offset: 0.65 },
@@ -167,6 +169,7 @@ function explodeButton(container: HTMLElement, btn: HTMLElement): void {
         fill: "forwards",
       }
     );
+    anim.onfinish = () => shard.remove();
   };
 
   // fast streaks first — the firework trails
@@ -178,7 +181,7 @@ function explodeButton(container: HTMLElement, btn: HTMLElement): void {
     spawnShard(rect.left - home.left + Math.random() * rect.width, rect.top - home.top + Math.random() * rect.height, {
       size: [5, 13],
       dist: [80, 300],
-      dur: [650, 1000],
+      dur: [780, 1200],
     });
   }
   // drifting stars
@@ -186,7 +189,7 @@ function explodeButton(container: HTMLElement, btn: HTMLElement): void {
     spawnShard(cx + (Math.random() - 0.5) * rect.width * 0.6, cy, {
       size: [15, 26],
       dist: [70, 190],
-      dur: [850, 1200],
+      dur: [1000, 1450],
       kind: "spark-star",
       text: "\u2726",
       color: Math.random() < 0.5 ? "#ffc233" : "#ff4d00",
@@ -199,7 +202,7 @@ function explodeButton(container: HTMLElement, btn: HTMLElement): void {
       spawnShard(cx + (Math.random() - 0.5) * 140, cy - 60 + (Math.random() - 0.5) * 90, {
         size: [3, 6],
         dist: [30, 110],
-        dur: [300, 550],
+        dur: [380, 650],
         color: Math.random() < 0.4 ? "#ffffff" : undefined as unknown as string,
       });
     }
@@ -228,12 +231,14 @@ export function playFlappy(opts: FlappyOptions): void {
             const btn = e.currentTarget as HTMLButtonElement;
             btn.disabled = true;
             btn.classList.add("is-launching");
-            explodeButton(startOverlay, btn);
+            explodeButton(stage, btn);
             const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            // Cut to the game the moment the main burst is spent — no dead
+            // beat after the explosion; the last shards finish over the sky.
             window.setTimeout(() => {
               startOverlay.remove();
               phase = "ready";
-            }, reduced ? 150 : 950);
+            }, reduced ? 120 : 620);
           },
         },
         "Play"
