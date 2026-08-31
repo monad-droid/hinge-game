@@ -107,7 +107,7 @@ export function playFlappy(opts: FlappyOptions): void {
             window.setTimeout(() => {
               startOverlay.remove();
               phase = "ready";
-            }, 380);
+            }, 620);
           },
         },
         "Play"

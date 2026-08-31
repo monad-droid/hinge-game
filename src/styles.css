@@ -352,7 +352,7 @@ h2:focus-visible {
     #ff4d00
   );
   background-size: 400% 100%;
-  animation: flight-rainbow 3.2s linear infinite;
+  animation: flight-rainbow 5.5s linear infinite;
 }
 
 @keyframes flight-rainbow {
@@ -365,15 +365,18 @@ h2:focus-visible {
 }
 
 .btn-flight.is-launching {
-  animation: flight-rainbow 3.2s linear infinite, flight-launch 380ms ease-out;
+  animation: flight-rainbow 5.5s linear infinite, flight-launch 620ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 @keyframes flight-launch {
-  30% {
-    transform: scale(1.05);
+  35% {
+    transform: scale(1.08) translateY(-6px);
+  }
+  65% {
+    transform: scale(1.03) translateY(-2px);
   }
   100% {
-    transform: scale(1);
+    transform: scale(1) translateY(0);
   }
 }
 
@@ -381,19 +384,19 @@ h2:focus-visible {
   content: "";
   position: absolute;
   inset: 0;
-  border: 3px solid #fff;
+  border: 5px solid #fff;
   pointer-events: none;
-  animation: flight-ring 380ms ease-out forwards;
+  animation: flight-ring 620ms ease-out forwards;
 }
 
 @keyframes flight-ring {
   from {
-    opacity: 0.9;
+    opacity: 1;
     transform: scale(1);
   }
   to {
     opacity: 0;
-    transform: scale(1.25, 1.9);
+    transform: scale(1.35, 2.6);
   }
 }
 
