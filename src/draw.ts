@@ -141,12 +141,12 @@ function showIntroP1(challenge: DrawingChallenge, opts: DrawingRoundOptions): vo
           { class: "stack" },
           h(
             "button",
-            { class: "btn btn-primary", onclick: () => showDraw(challenge, a, opts) },
+            { class: "btn btn-primary", onclick: () => showRules(challenge, a, opts) },
             capitalize(a.label)
           ),
           h(
             "button",
-            { class: "btn btn-primary", onclick: () => showDraw(challenge, b, opts) },
+            { class: "btn btn-primary", onclick: () => showRules(challenge, b, opts) },
             capitalize(b.label)
           )
         )
@@ -187,8 +187,49 @@ function showIntroP2(
           { class: "stack mt" },
           h(
             "button",
-            { class: "btn btn-primary", onclick: () => showDraw(challenge, component, opts) },
+            { class: "btn btn-primary", onclick: () => showRules(challenge, component, opts) },
             `Draw ${component.label}`
+          )
+        )
+      ),
+      footerNote()
+    )
+  );
+}
+
+// One-stroke rule acknowledgment: nobody reaches the canvas without
+// explicitly confirming they understand the constraint.
+function showRules(
+  challenge: DrawingChallenge,
+  component: DrawingComponent,
+  opts: DrawingRoundOptions
+): void {
+  mount(
+    h(
+      "div",
+      { class: "screen" },
+      h(
+        "header",
+        { class: "quiz-top" },
+        wordmark(),
+        h("span", { class: "progress-label" }, "The rules")
+      ),
+      h(
+        "main",
+        { class: "centered" },
+        h("h1", { class: "display" }, "One line. No lifting."),
+        h(
+          "p",
+          { class: "sub" },
+          "Once your finger touches down, that's your drawing until you let go. You get one retry. Choose your moment."
+        ),
+        h(
+          "div",
+          { class: "stack mt" },
+          h(
+            "button",
+            { class: "btn btn-primary", onclick: () => showDraw(challenge, component, opts) },
+            "I understand"
           )
         )
       ),
@@ -203,7 +244,7 @@ function showDraw(
   challenge: DrawingChallenge,
   component: DrawingComponent,
   opts: DrawingRoundOptions,
-  mulliganUsed = false
+  retryUsed = false
 ): void {
   const canvas = h("canvas", { class: "draw-canvas", "aria-label": `Drawing canvas for ${component.label}` });
   const startDot = h("div", { class: "start-dot", "aria-hidden": "true" });
@@ -216,8 +257,15 @@ function showDraw(
   );
   const restartBtn = h(
     "button",
-    { class: "btn-ghost btn", onclick: () => reset(), disabled: true },
-    "Restart"
+    {
+      class: "btn-ghost btn",
+      disabled: true,
+      onclick: () => {
+        cleanup();
+        showDraw(challenge, component, opts, true);
+      },
+    },
+    "Restart (1 left)"
   );
   const lockBtn = h(
     "button",
@@ -231,7 +279,7 @@ function showDraw(
         opts.onDone({
           component: component.id,
           points: pointsToTriples(thinned),
-          mulligan: mulliganUsed,
+          mulligan: retryUsed,
         });
       },
     },
@@ -246,7 +294,7 @@ function showDraw(
         "header",
         { class: "quiz-top" },
         wordmark(),
-        h("span", { class: "progress-label" }, "Finish the drawing")
+        h("span", { class: "progress-label" }, retryUsed ? "Final attempt" : "Finish the drawing")
       ),
       h(
         "main",
@@ -255,7 +303,7 @@ function showDraw(
         instructions,
         stage
       ),
-      h("div", { class: "stack" }, lockBtn, restartBtn)
+      h("div", { class: "stack" }, lockBtn, retryUsed ? null : restartBtn)
     )
   );
 
@@ -365,31 +413,23 @@ function showDraw(
     drawing = false;
     const length = pathLength(points);
     if (points.length < MIN_VALID_POINTS || length < MIN_VALID_LENGTH) {
-      if (!mulliganUsed) {
-        cleanup();
-        showMulligan(challenge, component, opts);
-        return;
-      }
-      // Mulligan spent: the short attempt stands, but Restart is right there.
-      strokeDone = true;
-    } else {
-      strokeDone = true;
+      // A micro-blip isn't a drawing: it never counts as the attempt and
+      // never spends the retry — just go again.
+      points = [];
+      strokeStartTime = 0;
+      startDot.classList.remove("start-dot-hidden");
+      toast("One long line \u2014 keep going.");
+      render();
+      return;
     }
+    strokeDone = true;
     lockBtn.removeAttribute("disabled");
-    restartBtn.removeAttribute("disabled");
-    instructions.textContent = "Lock it in, or restart and try again.";
-    render();
-  };
-
-  const reset = () => {
-    points = [];
-    drawing = false;
-    strokeDone = false;
-    strokeStartTime = 0;
-    lockBtn.setAttribute("disabled", "");
-    restartBtn.setAttribute("disabled", "");
-    startDot.classList.remove("start-dot-hidden");
-    instructions.textContent = "One line. Don't lift your finger.";
+    if (!retryUsed) {
+      restartBtn.removeAttribute("disabled");
+      instructions.textContent = "Lock it in, or spend your one retry.";
+    } else {
+      instructions.textContent = "This one counts. Lock it in.";
+    }
     render();
   };
 
@@ -410,41 +450,6 @@ function showDraw(
   onScreenExit(cleanup);
 
   size();
-}
-
-// One free accidental lift, exactly once.
-function showMulligan(
-  challenge: DrawingChallenge,
-  component: DrawingComponent,
-  opts: DrawingRoundOptions
-): void {
-  mount(
-    h(
-      "div",
-      { class: "screen" },
-      h(
-        "header",
-        { class: "quiz-top" },
-        wordmark(),
-        h("span", { class: "progress-label" }, "Finish the drawing")
-      ),
-      h(
-        "main",
-        { class: "centered" },
-        h("h1", { class: "display" }, "One continuous line \u{1F60F}"),
-        h("p", { class: "sub" }, "We'll give you that one."),
-        h(
-          "div",
-          { class: "stack mt" },
-          h(
-            "button",
-            { class: "btn btn-primary", onclick: () => showDraw(challenge, component, opts, true) },
-            "Try again"
-          )
-        )
-      )
-    )
-  );
 }
 
 function capitalize(s: string): string {
