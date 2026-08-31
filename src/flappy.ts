@@ -90,22 +90,38 @@ export function playFlappy(opts: FlappyOptions): void {
     { class: "flappy-overlay" },
     h("p", { class: "kicker" }, "Last thing"),
     h("h1", { class: "display" }, "The tiebreaker."),
-    h("p", { class: "sub" }, "One attempt. Tap to stay airborne."),
-    h("p", { class: "fine mt" }, "Tap anywhere to start."),
+    h("p", { class: "sub" }, "One attempt. Every tap keeps you airborne."),
     h(
-      "button",
-      {
-        class: "btn-ghost btn",
-        // pointerdown would otherwise bubble to the stage and start the run
-        // before the click lands — skipping must not spend the attempt.
-        onpointerdown: (e: Event) => e.stopPropagation(),
-        onclick: (e: Event) => {
-          e.stopPropagation();
-          cleanup();
-          opts.onDone(null);
+      "div",
+      { class: "stack mt" },
+      h(
+        "button",
+        {
+          class: "btn btn-primary",
+          onpointerdown: (e: Event) => e.stopPropagation(),
+          onclick: (e: Event) => {
+            e.stopPropagation();
+            startOverlay.remove();
+            phase = "ready";
+          },
         },
-      },
-      "I'm above this"
+        "Take flight"
+      ),
+      h(
+        "button",
+        {
+          class: "btn-ghost btn",
+          // pointerdown must not reach the stage — skipping (or merely
+          // pressing a button) can never spend the attempt.
+          onpointerdown: (e: Event) => e.stopPropagation(),
+          onclick: (e: Event) => {
+            e.stopPropagation();
+            cleanup();
+            opts.onDone(null);
+          },
+        },
+        "I'm above this"
+      )
     )
   );
 
@@ -161,9 +177,12 @@ export function playFlappy(opts: FlappyOptions): void {
   }));
 
   // ——— state ———
-  type Phase = "ready" | "playing" | "dead";
-  let phase: Phase = "ready";
-  let birdY = H * 0.42;
+  // intro: brand overlay with the start button. ready: overlay gone, bird
+  // bobbing, waiting for the first tap. Then playing → dead.
+  type Phase = "intro" | "ready" | "playing" | "dead";
+  let phase: Phase = "intro";
+  const restY = H * 0.42;
+  let birdY = restY;
   let velocity = 0;
   let score = 0;
   let pipes: { x: number; gapY: number; counted: boolean }[] = [];
@@ -179,10 +198,8 @@ export function playFlappy(opts: FlappyOptions): void {
   };
 
   const flap = () => {
-    if (phase === "ready") {
-      phase = "playing";
-      startOverlay.remove();
-    }
+    if (phase === "intro") return; // taps do nothing until Take flight
+    if (phase === "ready") phase = "playing";
     if (phase === "playing") velocity = FLAP;
   };
 
@@ -320,14 +337,28 @@ export function playFlappy(opts: FlappyOptions): void {
       ctx.fillRect(sx, FLOOR_Y + 10, 13, 9);
     }
 
-    // bird: sprite frame by time, tilted with velocity
-    const frame =
-      phase === "playing" ? birdFrames[Math.floor(elapsed / 0.09) % 3]! : birdFrames[1]!;
+    // bird: sprite frame by time, tilted with velocity (level while bobbing)
+    const frame = birdFrames[Math.floor(elapsed / 0.09) % 3]!;
     ctx.save();
     ctx.translate(BIRD_X + BIRD_SIZE / 2, birdY + BIRD_SIZE / 2);
-    ctx.rotate(Math.max(-0.4, Math.min(0.9, velocity / (900 * u))));
+    if (phase === "playing" || phase === "dead") {
+      ctx.rotate(Math.max(-0.4, Math.min(0.9, velocity / (900 * u))));
+    }
     ctx.drawImage(frame, -SPRITE_W / 2, -SPRITE_H / 2, SPRITE_W, SPRITE_H);
     ctx.restore();
+
+    // get-ready hint
+    if (phase === "ready") {
+      ctx.font = "900 34px -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+      ctx.textAlign = "center";
+      ctx.lineWidth = 7;
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = OUTLINE;
+      ctx.strokeText("TAP TO FLAP", W / 2, H * 0.62);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText("TAP TO FLAP", W / 2, H * 0.62);
+      ctx.textAlign = "left";
+    }
 
     // arcade score
     if (phase !== "ready") {
@@ -350,9 +381,11 @@ export function playFlappy(opts: FlappyOptions): void {
     }
     const dt = lastTime ? Math.min((t - lastTime) / 1000, 1 / 30) : 0;
     lastTime = t;
+    elapsed += dt;
     if (phase === "playing") {
-      elapsed += dt;
       step(dt);
+    } else if (phase === "ready") {
+      birdY = restY + Math.sin(elapsed * 4) * 7 * u; // idle bob
     }
     draw();
     raf = requestAnimationFrame(frame);
