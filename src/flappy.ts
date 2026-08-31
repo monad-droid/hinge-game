@@ -564,7 +564,7 @@ export function playFlappy(opts: FlappyOptions): void {
       draw();
       return;
     }
-    const dt = lastTime ? Math.min((t - lastTime) / 1000, 1 / 30) : 0;
+    const dt = lastTime ? Math.min((t - lastTime) / 1000, 1 / 45) : 0;
     lastTime = t;
     elapsed += dt;
     if (phase === "playing") {
@@ -589,6 +589,11 @@ export function playFlappy(opts: FlappyOptions): void {
     }
   };
   stage.addEventListener("pointerdown", onPointer);
+  // pointerdown preventDefault doesn't stop every WebKit touch gesture;
+  // swallow raw touch events on the stage too (non-passive on purpose).
+  const onTouch = (e: Event) => e.preventDefault();
+  stage.addEventListener("touchstart", onTouch, { passive: false });
+  stage.addEventListener("touchend", onTouch, { passive: false });
   window.addEventListener("keydown", onKey);
   document.addEventListener("visibilitychange", pauseIfPlaying);
   window.addEventListener("blur", pauseIfPlaying);
@@ -596,6 +601,8 @@ export function playFlappy(opts: FlappyOptions): void {
   const cleanup = () => {
     cancelAnimationFrame(raf);
     stage.removeEventListener("pointerdown", onPointer);
+    stage.removeEventListener("touchstart", onTouch);
+    stage.removeEventListener("touchend", onTouch);
     window.removeEventListener("keydown", onKey);
     document.removeEventListener("visibilitychange", pauseIfPlaying);
     window.removeEventListener("blur", pauseIfPlaying);
