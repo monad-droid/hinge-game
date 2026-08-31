@@ -296,6 +296,7 @@ function showDrawReveal(ctx: RevealContext): void {
         component.referencePath.map((p) => `${(p.x * 100).toFixed(2)},${(p.y * 100).toFixed(2)}`).join(" ")
       );
       ghost.setAttribute("class", "ref-line-ghost");
+      ghost.setAttribute("vector-effect", "non-scaling-stroke");
       svg.prepend(ghost);
     }
   }

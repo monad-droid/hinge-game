@@ -532,13 +532,17 @@ h2:focus-visible {
   stroke: rgba(25, 21, 18, 0.18);
 }
 
-/* faint dashed target behind the players' combined drawing */
+/* faint dashed target behind the players' combined drawing — same
+   on-screen weight/dash/opacity as the reference shown while drawing
+   (canvas: 2px, dash 6/7, 0.28 ink). non-scaling-stroke makes the SVG
+   use real pixels instead of scaling with the frame. */
 .ref-line-ghost {
   fill: none;
-  stroke: rgba(25, 21, 18, 0.22);
-  stroke-width: 1.6;
-  stroke-dasharray: 3 4;
+  stroke: rgba(25, 21, 18, 0.28);
+  stroke-width: 2px;
+  stroke-dasharray: 6 7;
   stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
 }
 
 .draw-screen {
