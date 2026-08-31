@@ -82,37 +82,128 @@ function makeBirdFrames(): HTMLCanvasElement[] {
   });
 }
 
-// Blows the Play button apart: shards of the palette fan out from the
-// button's area, arc under fake gravity, and fade. Pure DOM + WAAPI.
+// Blows the Play button apart: white flash, expanding shockwave, a fan of
+// palette shards, fast streaks, drifting star glyphs, a screen shake, and a
+// delayed second crackle. Pure DOM + WAAPI.
+const BOOM_COLORS = ["#ff4d00", "#ffc233", "#74bf2e", "#2657e0", "#a04de0", "#191512", "#ffffff"];
+
 function explodeButton(container: HTMLElement, btn: HTMLElement): void {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const rect = btn.getBoundingClientRect();
   const home = container.getBoundingClientRect();
-  const colors = ["#ff4d00", "#ffc233", "#74bf2e", "#2657e0", "#a04de0", "#191512", "#ffffff"];
-  for (let i = 0; i < 28; i++) {
+  const cx = rect.left - home.left + rect.width / 2;
+  const cy = rect.top - home.top + rect.height / 2;
+
+  // central flash
+  const flash = document.createElement("span");
+  flash.className = "boom-flash";
+  flash.style.cssText = `left:${cx}px;top:${cy}px`;
+  container.append(flash);
+  flash.animate(
+    [
+      { transform: "translate(-50%, -50%) scale(0.2)", opacity: 1 },
+      { transform: "translate(-50%, -50%) scale(2.6)", opacity: 0 },
+    ],
+    { duration: 320, easing: "ease-out", fill: "forwards" }
+  );
+
+  // circular shockwave
+  const ring = document.createElement("span");
+  ring.className = "boom-ring";
+  ring.style.cssText = `left:${cx}px;top:${cy}px`;
+  container.append(ring);
+  ring.animate(
+    [
+      { transform: "translate(-50%, -50%) scale(0.2)", opacity: 1 },
+      { transform: "translate(-50%, -50%) scale(3.4)", opacity: 0 },
+    ],
+    { duration: 550, easing: "cubic-bezier(0.16, 0.85, 0.35, 1)", fill: "forwards" }
+  );
+
+  // screen shake
+  container.animate(
+    [
+      { transform: "translate(0, 0)" },
+      { transform: "translate(-5px, 4px)" },
+      { transform: "translate(5px, -3px)" },
+      { transform: "translate(-4px, -4px)" },
+      { transform: "translate(3px, 3px)" },
+      { transform: "translate(0, 0)" },
+    ],
+    { duration: 380, easing: "ease-out" }
+  );
+
+  const spawnShard = (
+    x: number,
+    y: number,
+    opts: { size: [number, number]; dist: [number, number]; dur: [number, number]; kind?: string; text?: string; color?: string }
+  ) => {
     const shard = document.createElement("span");
-    shard.className = "spark";
-    const size = 5 + Math.random() * 8;
-    const x = rect.left - home.left + Math.random() * rect.width;
-    const y = rect.top - home.top + Math.random() * rect.height;
-    shard.style.cssText = `left:${x}px;top:${y}px;width:${size}px;height:${
-      size * (Math.random() < 0.4 ? 2.4 : 1)
-    }px;background:${colors[i % colors.length]}`;
+    shard.className = "spark" + (opts.kind ? ` ${opts.kind}` : "");
+    const size = opts.size[0] + Math.random() * (opts.size[1] - opts.size[0]);
+    const color = opts.color ?? BOOM_COLORS[Math.floor(Math.random() * BOOM_COLORS.length)]!;
+    if (opts.text) {
+      shard.textContent = opts.text;
+      shard.style.cssText = `left:${x}px;top:${y}px;font-size:${size}px;color:${color}`;
+    } else {
+      const tall = Math.random() < 0.35 ? 2.4 : 1;
+      shard.style.cssText = `left:${x}px;top:${y}px;width:${size}px;height:${size * tall}px;background:${color}`;
+    }
     container.append(shard);
-    const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.7; // upward fan
-    const dist = 90 + Math.random() * 210;
+    const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.8;
+    const dist = opts.dist[0] + Math.random() * (opts.dist[1] - opts.dist[0]);
     const dx = Math.cos(angle) * dist;
     const dy = Math.sin(angle) * dist;
-    const spin = (Math.random() - 0.5) * 720;
+    const spin = (Math.random() - 0.5) * 900;
     shard.animate(
       [
         { transform: "translate(0, 0) rotate(0deg)", opacity: 1 },
         { transform: `translate(${dx}px, ${dy}px) rotate(${spin}deg)`, opacity: 1, offset: 0.65 },
-        { transform: `translate(${dx}px, ${dy + 70}px) rotate(${spin * 1.4}deg)`, opacity: 0 },
+        { transform: `translate(${dx}px, ${dy + 80}px) rotate(${spin * 1.4}deg)`, opacity: 0 },
       ],
-      { duration: 700 + Math.random() * 300, easing: "cubic-bezier(0.16, 0.85, 0.35, 1)", fill: "forwards" }
+      {
+        duration: opts.dur[0] + Math.random() * (opts.dur[1] - opts.dur[0]),
+        easing: "cubic-bezier(0.16, 0.85, 0.35, 1)",
+        fill: "forwards",
+      }
     );
+  };
+
+  // fast streaks first — the firework trails
+  for (let i = 0; i < 14; i++) {
+    spawnShard(cx, cy, { size: [3, 4], dist: [140, 330], dur: [320, 520], kind: "spark-streak", color: Math.random() < 0.5 ? "#ffffff" : "#ffc233" });
   }
+  // main confetti fan from across the button's face
+  for (let i = 0; i < 46; i++) {
+    spawnShard(rect.left - home.left + Math.random() * rect.width, rect.top - home.top + Math.random() * rect.height, {
+      size: [5, 13],
+      dist: [80, 300],
+      dur: [650, 1000],
+    });
+  }
+  // drifting stars
+  for (let i = 0; i < 7; i++) {
+    spawnShard(cx + (Math.random() - 0.5) * rect.width * 0.6, cy, {
+      size: [15, 26],
+      dist: [70, 190],
+      dur: [850, 1200],
+      kind: "spark-star",
+      text: "\u2726",
+      color: Math.random() < 0.5 ? "#ffc233" : "#ff4d00",
+    });
+  }
+  // delayed second crackle near the center
+  window.setTimeout(() => {
+    if (!container.isConnected) return;
+    for (let i = 0; i < 18; i++) {
+      spawnShard(cx + (Math.random() - 0.5) * 140, cy - 60 + (Math.random() - 0.5) * 90, {
+        size: [3, 6],
+        dist: [30, 110],
+        dur: [300, 550],
+        color: Math.random() < 0.4 ? "#ffffff" : undefined as unknown as string,
+      });
+    }
+  }, 260);
 }
 
 export function playFlappy(opts: FlappyOptions): void {
@@ -142,7 +233,7 @@ export function playFlappy(opts: FlappyOptions): void {
             window.setTimeout(() => {
               startOverlay.remove();
               phase = "ready";
-            }, reduced ? 150 : 800);
+            }, reduced ? 150 : 950);
           },
         },
         "Play"

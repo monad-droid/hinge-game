@@ -403,9 +403,39 @@ h2:focus-visible {
   }
 }
 
-/* firework shards from the exploded button */
+/* firework pieces from the exploded button */
 .spark {
   position: absolute;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.spark-streak {
+  border-radius: 2px;
+}
+
+.spark-star {
+  background: none;
+  line-height: 1;
+}
+
+.boom-flash {
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 0%, rgba(255, 194, 51, 0.9) 40%, rgba(255, 194, 51, 0) 70%);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.boom-ring {
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 5px solid #ffc233;
+  box-shadow: 0 0 0 3px rgba(255, 77, 0, 0.5);
   pointer-events: none;
   z-index: 2;
 }
