@@ -30,15 +30,22 @@ export function startQuiz(opts: QuizOptions): void {
 }
 
 // The steps between the last question and submission: tiebreaker (one
-// attempt — the draft remembers whether it's been played), then prediction.
-function afterAnswers(opts: QuizOptions, answers: Answer[]): void {
-  const draft = getDraft(opts.draftKey);
-  const flappy = draft?.flappy;
+// attempt), then prediction. The played/skipped score is carried in memory
+// (flappyMemo) and mirrored to the draft for refresh-resume — never trust
+// the draft read-back alone, since storage can be unavailable (private
+// windows, locked-down webviews) and a failed read must not re-offer the
+// one attempt.
+function afterAnswers(
+  opts: QuizOptions,
+  answers: Answer[],
+  flappyMemo?: number | null
+): void {
+  const flappy = flappyMemo !== undefined ? flappyMemo : getDraft(opts.draftKey)?.flappy;
   if (ENABLE_MINIGAME && flappy === undefined) {
     playFlappy({
       onDone: (score) => {
         setDraft(opts.draftKey, { answers, flappy: score });
-        afterAnswers(opts, answers);
+        afterAnswers(opts, answers, score);
       },
     });
     return;
@@ -47,7 +54,7 @@ function afterAnswers(opts: QuizOptions, answers: Answer[]): void {
   if (ENABLE_PREDICTIONS) {
     showPrediction(opts, answers, settled);
   } else {
-    void submit(opts, answers, null, settled, () => afterAnswers(opts, answers));
+    void submit(opts, answers, null, settled, () => afterAnswers(opts, answers, settled));
   }
 }
 

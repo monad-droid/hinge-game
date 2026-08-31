@@ -5,14 +5,16 @@
   "main": "worker/index.ts",
   "compatibility_date": "2025-08-01",
 
-  // Static frontend (built by Vite into ./dist).
-  // /api/* always runs the Worker; everything else is served as a static
-  // asset, falling back to index.html for SPA routes like /g/XK42P.
+  // Static frontend (built by Vite into ./dist). All requests run the
+  // Worker so it can set cache headers: HTML must always revalidate (stale
+  // cached bundles = users seeing an old version of the app), while hashed
+  // /assets/* files cache forever. SPA fallback serves index.html for
+  // routes like /g/XK42P.
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": true
   },
 
   // Game storage. Create with: wrangler d1 create debatable-db

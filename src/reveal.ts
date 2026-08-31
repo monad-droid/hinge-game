@@ -308,7 +308,7 @@ function showFinal(ctx: RevealContext): void {
         "div",
         { class: "stack" },
         h("button", { class: "btn btn-primary", onclick: () => showShareCard(ctx) }, "See the results card"),
-        h("button", { class: "btn-ghost btn", onclick: ctx.onHome }, "Start your own debate")
+        h("button", { class: "btn-ghost btn", onclick: ctx.onHome }, "Play again")
       )
     )
   );

@@ -264,8 +264,21 @@ app.get("/api/games/:code/reveal", async (c) => {
 
 app.all("/api/*", (c) => err(c, 404, "not_found", "No such endpoint."));
 
-// Anything else that reached the Worker falls through to static assets.
-app.all("*", (c) => c.env.ASSETS.fetch(c.req.raw));
+// Anything else falls through to static assets, with explicit caching:
+// HTML always revalidates (a stale index.html means users run an old
+// version of the app after a deploy); hashed /assets/* files never change
+// and cache forever.
+app.all("*", async (c) => {
+  const res = await c.env.ASSETS.fetch(c.req.raw);
+  const contentType = res.headers.get("content-type") ?? "";
+  const headers = new Headers(res.headers);
+  if (contentType.includes("text/html")) {
+    headers.set("Cache-Control", "no-cache, must-revalidate");
+  } else if (new URL(c.req.url).pathname.startsWith("/assets/")) {
+    headers.set("Cache-Control", "public, max-age=31536000, immutable");
+  }
+  return new Response(res.body, { status: res.status, headers });
+});
 
 export default {
   fetch: app.fetch,
