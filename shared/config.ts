@@ -4,7 +4,9 @@
 export const APP_NAME = "Debatable";
 export const PUBLIC_DOMAIN = "debatable.lol";
 export const GAME_EXPIRATION_DAYS = 30;
-export const ENABLE_PREDICTIONS = true;
+// Off for now — the "how alike do you think you are?" step is on trial.
+// Flipping this back on restores the prediction screens and reveal beat.
+export const ENABLE_PREDICTIONS = false;
 
 // The flappy tiebreaker after question 7: one attempt, skippable, both
 // scores compared in the reveal. Flip off to remove it from the flow
