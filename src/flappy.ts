@@ -158,10 +158,12 @@ export function playFlappy(opts: FlappyOptions): void {
   const u = H / 640;
   const GRAVITY = 1900 * u;
   const FLAP = -540 * u;
-  const PIPE_SPEED = 170 * u;
-  const PIPE_GAP = 185 * u;
+  // Difficulty ramps with score: the world speeds up and the gaps tighten,
+  // so first-timers still clear a few pipes but 40+ takes actual skill.
+  const speedNow = () => (175 + Math.min(60, score) * 1.4) * u;
+  const gapNow = () => (172 - Math.min(45, score)) * u;
   const PIPE_WIDTH = 62;
-  const PIPE_SPACING = 250;
+  const PIPE_SPACING = 245;
   const BIRD_SIZE = 26; // collision box; the sprite is drawn a bit larger
   const BIRD_X = Math.min(W * 0.3, 140);
   const GROUND_H = 48;
@@ -185,16 +187,16 @@ export function playFlappy(opts: FlappyOptions): void {
   let birdY = restY;
   let velocity = 0;
   let score = 0;
-  let pipes: { x: number; gapY: number; counted: boolean }[] = [];
+  let pipes: { x: number; gapY: number; gap: number; counted: boolean }[] = [];
   let nextPipeX = W + 140;
   let scrollX = 0;
   let raf = 0;
   let lastTime = 0;
   let elapsed = 0;
 
-  const spawnGapY = () => {
-    const margin = 70 * u;
-    return margin + Math.random() * (FLOOR_Y - PIPE_GAP - margin * 2);
+  const spawnGapY = (gap: number) => {
+    const margin = 62 * u;
+    return margin + Math.random() * (FLOOR_Y - gap - margin * 2);
   };
 
   const flap = () => {
@@ -234,9 +236,10 @@ export function playFlappy(opts: FlappyOptions): void {
 
   // ——— simulation ———
   const step = (dt: number) => {
+    const speed = speedNow();
     velocity += GRAVITY * dt;
     birdY += velocity * dt;
-    scrollX += PIPE_SPEED * dt;
+    scrollX += speed * dt;
 
     if (birdY < 0) {
       birdY = 0;
@@ -248,17 +251,18 @@ export function playFlappy(opts: FlappyOptions): void {
       return;
     }
 
-    for (const pipe of pipes) pipe.x -= PIPE_SPEED * dt;
+    for (const pipe of pipes) pipe.x -= speed * dt;
     pipes = pipes.filter((p) => p.x + PIPE_WIDTH > -10);
-    nextPipeX -= PIPE_SPEED * dt;
+    nextPipeX -= speed * dt;
     if (nextPipeX <= W) {
-      pipes.push({ x: nextPipeX, gapY: spawnGapY(), counted: false });
+      const gap = gapNow();
+      pipes.push({ x: nextPipeX, gapY: spawnGapY(gap), gap, counted: false });
       nextPipeX += PIPE_SPACING;
     }
 
     for (const pipe of pipes) {
       const inX = BIRD_X + BIRD_SIZE > pipe.x + 4 && BIRD_X < pipe.x + PIPE_WIDTH - 4;
-      if (inX && (birdY < pipe.gapY || birdY + BIRD_SIZE > pipe.gapY + PIPE_GAP)) {
+      if (inX && (birdY < pipe.gapY || birdY + BIRD_SIZE > pipe.gapY + pipe.gap)) {
         die();
         return;
       }
@@ -270,7 +274,7 @@ export function playFlappy(opts: FlappyOptions): void {
   };
 
   // ——— rendering ———
-  const drawPipePair = (pipe: { x: number; gapY: number }) => {
+  const drawPipePair = (pipe: { x: number; gapY: number; gap: number }) => {
     const capH = 26;
     const x = pipe.x;
 
@@ -301,8 +305,8 @@ export function playFlappy(opts: FlappyOptions): void {
     body(0, pipe.gapY - capH);
     cap(pipe.gapY - capH);
     // bottom pipe (stands on the ground)
-    cap(pipe.gapY + PIPE_GAP);
-    body(pipe.gapY + PIPE_GAP + capH, FLOOR_Y - pipe.gapY - PIPE_GAP - capH);
+    cap(pipe.gapY + pipe.gap);
+    body(pipe.gapY + pipe.gap + capH, FLOOR_Y - pipe.gapY - pipe.gap - capH);
   };
 
   const draw = () => {
