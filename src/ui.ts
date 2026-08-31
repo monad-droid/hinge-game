@@ -75,7 +75,6 @@ export function footerNote(): HTMLElement {
   return h(
     "div",
     { class: "footer" },
-    h("p", { class: "fine" }, "Games disappear after 30 days."),
-    h("p", { class: "fine", style: "margin-top: 0.3rem" }, BUILT_BY)
+    h("p", { class: "fine" }, BUILT_BY)
   );
 }
