@@ -194,7 +194,7 @@ export function playFlappy(opts: FlappyOptions): void {
   const showResult = () => {
     const overlay = h(
       "div",
-      { class: "flappy-overlay" },
+      { class: "flappy-overlay flappy-overlay-fade" },
       h("p", { class: "kicker" }, "Final distance"),
       h("p", { class: "score-huge" }, String(score)),
       h("p", { class: "verdict-line" }, resultLine(score)),

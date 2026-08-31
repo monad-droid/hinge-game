@@ -357,6 +357,11 @@ h2:focus-visible {
   gap: 0.25rem;
   padding: 24px;
   background: var(--paper);
+  /* No entry animation on the base overlay: while it fades, the game world
+     behind it shows through — the intro must be opaque from frame one. */
+}
+
+.flappy-overlay-fade {
   animation: screen-in 200ms ease-out both;
 }
 
