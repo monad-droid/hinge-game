@@ -214,10 +214,10 @@ function explodeButton(container: HTMLElement, btn: HTMLElement): void {
 function rainConfetti(container: HTMLElement): void {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const home = container.getBoundingClientRect();
-  for (let i = 0; i < 34; i++) {
+  for (let i = 0; i < 102; i++) {
     const piece = document.createElement("span");
     piece.className = "spark";
-    const size = 6 + Math.random() * 8;
+    const size = 3 + Math.random() * 4;
     const strip = Math.random() < 0.5;
     piece.style.cssText = `left:${Math.random() * home.width}px;top:-26px;width:${size}px;height:${
       strip ? size * 2.3 : size
