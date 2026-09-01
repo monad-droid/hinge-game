@@ -202,7 +202,7 @@ function afterTiebreaker(ctx: RevealContext): void {
   if (ctx.data.drawing) {
     showDrawTease(ctx);
   } else {
-    showFinal(ctx);
+    showShareCard(ctx);
   }
 }
 
@@ -426,7 +426,7 @@ function showDrawCompare(ctx: RevealContext): void {
       h(
         "div",
         { class: "stack" },
-        h("button", { class: "btn btn-primary", onclick: () => showFinal(ctx) }, "The verdict")
+        h("button", { class: "btn btn-primary", onclick: () => showShareCard(ctx) }, "The verdict")
       )
     )
   );
@@ -485,30 +485,8 @@ export function featuredDispute(ctx: RevealContext): Question | null {
   return disputes[seedHash(ctx.data.code) % disputes.length]!;
 }
 
-function showFinal(ctx: RevealContext): void {
-  mount(
-    h(
-      "div",
-      { class: "screen" },
-      h("header", { class: "landing-top" }, wordmark()),
-      h(
-        "main",
-        { class: "centered" },
-        h("h1", { class: "kicker" }, "Final verdict"),
-        scoreEl(ctx.data.score, "score-huge"),
-        h("p", { class: "sub" }, `${ctx.data.score} of ${QUESTIONS_PER_GAME} aligned.`),
-        h("p", { class: "verdict-line" }, h("span", { class: "hl" }, ctx.verdict))
-      ),
-      h(
-        "div",
-        { class: "stack" },
-        h("button", { class: "btn btn-primary", onclick: () => showShareCard(ctx) }, "See the results card"),
-        h("button", { class: "btn-ghost btn", onclick: ctx.onHome }, "Play again")
-      )
-    )
-  );
-}
-
+// The reveal ends here: the share card doubles as the final-verdict
+// screen (it already carries the score and the verdict line).
 function showShareCard(ctx: RevealContext): void {
   const dispute = featuredDispute(ctx);
   const drawing = ctx.data.drawing;
@@ -603,7 +581,7 @@ function showShareCard(ctx: RevealContext): void {
           },
           "Save image"
         ),
-        h("button", { class: "btn-ghost btn", onclick: () => showFinal(ctx) }, "Back")
+        h("button", { class: "btn-ghost btn", onclick: ctx.onHome }, "Play again")
       )
     )
   );
