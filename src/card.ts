@@ -9,6 +9,7 @@ export interface CardData {
   score: number;
   verdict: string;
   disputeTopic: string | null;
+  flappy: { youLabel: string; themLabel: string; you: number | null; them: number | null } | null;
   drawing: { challengeId: string; p1: PointTriple[]; p2: PointTriple[]; teamScore: number } | null;
 }
 
@@ -198,6 +199,37 @@ async function renderCardPng(data: CardData): Promise<Blob> {
     ctx.fillStyle = ACCENT;
     ctx.font = `800 30px ${sans}`;
     drawTracked(ctx, `TEAM DRAWING: ${data.drawing.teamScore}%`, box.x, box.y + box.size + 48, 3);
+  }
+
+  // Flappy scores: the right column beside the big score, or squeezed
+  // under the drawing thumbnail when that occupies the column.
+  if (data.flappy) {
+    const fmt = (label: string, score: number | null) =>
+      `${label} ${score === null ? "refused" : score}`.toUpperCase();
+    const youLine = fmt(data.flappy.youLabel, data.flappy.you);
+    const themLine = fmt(data.flappy.themLabel, data.flappy.them);
+    if (!data.drawing) {
+      // Right column hugs the frame: wide enough for its longest line.
+      ctx.font = `800 52px ${sans}`;
+      const colWidth = Math.max(ctx.measureText(youLine).width, ctx.measureText(themLine).width, 240);
+      const fx = W - margin - colWidth;
+      ctx.fillStyle = ACCENT;
+      ctx.font = `800 28px ${sans}`;
+      drawTracked(ctx, "FLAPPY", fx, 270, 4);
+      ctx.fillStyle = INK;
+      ctx.font = `800 52px ${sans}`;
+      ctx.fillText(youLine, fx, 350);
+      ctx.fillText(themLine, fx, 420);
+    } else {
+      const fx = W - margin - 300;
+      ctx.fillStyle = ACCENT;
+      ctx.font = `800 24px ${sans}`;
+      drawTracked(ctx, "FLAPPY", fx, 636, 3);
+      ctx.fillStyle = INK;
+      ctx.font = `800 36px ${sans}`;
+      ctx.fillText(youLine, fx, 688);
+      ctx.fillText(themLine, fx, 736);
+    }
   }
 
   // Domain + credit

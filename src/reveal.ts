@@ -485,11 +485,30 @@ export function featuredDispute(ctx: RevealContext): Question | null {
   return disputes[seedHash(ctx.data.code) % disputes.length]!;
 }
 
+function flappyCardScore(score: number | null): string {
+  return score === null ? "refused" : String(score);
+}
+
 // The reveal ends here: the share card doubles as the final-verdict
 // screen (it already carries the score and the verdict line).
 function showShareCard(ctx: RevealContext): void {
   const dispute = featuredDispute(ctx);
   const drawing = ctx.data.drawing;
+  const flappyYou = ctx.perspective === "p2" ? ctx.data.p2.flappy : ctx.data.p1.flappy;
+  const flappyThem = ctx.perspective === "p2" ? ctx.data.p1.flappy : ctx.data.p2.flappy;
+
+  const flappyRow = hasTiebreaker(ctx)
+    ? h(
+        "div",
+        null,
+        h("span", { class: "side-who" }, "Flappy scores"),
+        h(
+          "div",
+          { class: "card-dispute-topic" },
+          `${ctx.youLabel} ${flappyCardScore(flappyYou)} · ${ctx.themLabel} ${flappyCardScore(flappyThem)}`
+        )
+      )
+    : null;
 
   let drawRow: HTMLElement | null = null;
   if (drawing) {
@@ -536,6 +555,7 @@ function showShareCard(ctx: RevealContext): void {
           )
     ),
     drawRow,
+    flappyRow,
     h("p", { class: "card-verdict" }, ctx.verdict),
     h(
       "div",
@@ -569,6 +589,9 @@ function showShareCard(ctx: RevealContext): void {
                 score: ctx.data.score,
                 verdict: ctx.verdict,
                 disputeTopic: dispute ? dispute.topic : null,
+                flappy: hasTiebreaker(ctx)
+                  ? { youLabel: ctx.youLabel, themLabel: ctx.themLabel, you: flappyYou, them: flappyThem }
+                  : null,
                 drawing: drawing
                   ? {
                       challengeId: drawing.challengeId,
