@@ -17,7 +17,9 @@ export const FLAPPY_MAX_SCORE = 9999;
 
 // Finish the Drawing: the collaborative bonus round after the questions.
 // Off removes it from the flow; stored strokes are simply ignored.
-export const ENABLE_DRAWING = true;
+// Currently off — the round is parked, code kept intact, for a future
+// mode picker where players choose which bonus rounds to play.
+export const ENABLE_DRAWING = false;
 
 // The question pack every new game is created from — the one live question
 // list. Existing games keep the pack they were created with, so bumping

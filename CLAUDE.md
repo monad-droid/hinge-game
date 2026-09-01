@@ -29,7 +29,7 @@ migrations/           0002-flappy.sql, 0003-drawing.sql (ALTERs for existing DBs
 wrangler.jsonc        Worker + assets (run_worker_first: true) + D1 + daily cron
 shared/               Imported by BOTH worker and frontend
   config.ts           Flags: ENABLE_PREDICTIONS=false, ENABLE_MINIGAME=true,
-                      ENABLE_DRAWING=true, CURRENT_PACK_ID="original-v3", BUILT_BY
+                      ENABLE_DRAWING=false, CURRENT_PACK_ID="original-v3", BUILT_BY
   packs.ts            Question packs. Players see ONE list (CURRENT_PACK_ID);
                       old packs stay frozen so old games render correctly
   drawing.ts          Drawing challenges (house_v1), stroke geometry,
@@ -127,7 +127,9 @@ from Hinge" attribution (footer/card/PNG); security headers;
 explicit submit-retry screen.
 
 **Config state**: predictions OFF (screens still in code; one-line
-re-enable), flappy ON, drawing ON. Live pack: original-v3 (fries/voice
+re-enable), flappy ON, drawing OFF (parked for a future mode picker —
+all code kept in place; one-line re-enable via ENABLE_DRAWING). Live
+pack: original-v3 (fries/voice
 note/alarms/vacation/empty day/birthday/eating out). Reveal labels are
 always You/Them (stored role, else creator's perspective).
 
