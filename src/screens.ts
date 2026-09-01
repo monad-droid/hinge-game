@@ -182,11 +182,7 @@ export function showP2Intro(opts: { onBegin: () => void }): void {
           h("span", { style: "color: var(--accent)" }, "your"),
           " turn."
         ),
-        h(
-          "p",
-          { class: "sub" },
-          "Answer 7 quick questions. See where you agree, disagree, and everything in between."
-        ),
+        h("p", { class: "sub" }, "Let's see how questionable your opinions are."),
         h(
           "div",
           { class: "stack mt" },
