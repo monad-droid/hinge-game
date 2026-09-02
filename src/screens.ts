@@ -182,7 +182,12 @@ export function showP2Intro(opts: { onBegin: () => void }): void {
           h("span", { style: "color: var(--accent)" }, "your"),
           " turn."
         ),
-        h("p", { class: "sub" }, "Answer 7 questions. See where you agree. ", h("span", { style: "white-space: nowrap" }, "Debate the rest.")),
+        h(
+          "p",
+          { class: "sub", style: "max-width: none" },
+          "Answer 7 questions. See where you agree. ",
+          h("span", { style: "white-space: nowrap" }, "Debate the rest.")
+        ),
         h(
           "div",
           { class: "stack mt" },
