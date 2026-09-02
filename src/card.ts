@@ -205,7 +205,7 @@ async function renderCardPng(data: CardData): Promise<Blob> {
   // under the drawing thumbnail when that occupies the column.
   if (data.flappy) {
     const fmt = (label: string, score: number | null) =>
-      `${label}: ${score === null ? "refused" : score}`.toUpperCase();
+      `${label} – ${score === null ? "refused" : score}`.toUpperCase();
     const youLine = fmt(data.flappy.youLabel, data.flappy.you);
     const themLine = fmt(data.flappy.themLabel, data.flappy.them);
     if (!data.drawing) {
