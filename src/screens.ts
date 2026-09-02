@@ -182,11 +182,11 @@ export function showP2Intro(opts: { onBegin: () => void }): void {
           h("span", { style: "color: var(--accent)" }, "your"),
           " turn."
         ),
-        h("p", { class: "sub" }, "Let's see how questionable your opinions are."),
+        h("p", { class: "sub" }, "Answer 7 questions. See where you agree. Debate the rest."),
         h(
           "div",
           { class: "stack mt" },
-          h("button", { class: "btn btn-primary", onclick: opts.onBegin }, "Pick my sides"),
+          h("button", { class: "btn btn-primary", onclick: opts.onBegin }, "Let's do it"),
           h("p", { class: "fine", style: "text-align:center" }, "No peeking. Their answers stay hidden until you lock yours.")
         )
       ),
