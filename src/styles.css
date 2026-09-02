@@ -972,6 +972,27 @@ h2:focus-visible {
   color: var(--accent);
 }
 
+/* score + flappy side by side, then a rule — mirrors the saved PNG */
+.card-toprow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.card-flappy {
+  margin-top: 0.75rem;
+}
+
+.share-card .card-flappy .side-who {
+  color: var(--accent);
+}
+
+.card-rule {
+  height: 3px;
+  background: var(--ink);
+}
+
 .card-dispute-topic {
   font-weight: 800;
   text-transform: uppercase;

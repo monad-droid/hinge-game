@@ -497,16 +497,14 @@ function showShareCard(ctx: RevealContext): void {
   const flappyYou = ctx.perspective === "p2" ? ctx.data.p2.flappy : ctx.data.p1.flappy;
   const flappyThem = ctx.perspective === "p2" ? ctx.data.p1.flappy : ctx.data.p2.flappy;
 
+  // Flappy sits top-right beside the big score, mirroring the saved PNG.
   const flappyRow = hasTiebreaker(ctx)
     ? h(
         "div",
-        null,
-        h("span", { class: "side-who" }, "Flappy scores"),
-        h(
-          "div",
-          { class: "card-dispute-topic" },
-          `${ctx.youLabel} – ${flappyCardScore(flappyYou)} · ${ctx.themLabel} – ${flappyCardScore(flappyThem)}`
-        )
+        { class: "card-flappy" },
+        h("span", { class: "side-who" }, "Flappy"),
+        h("div", { class: "card-dispute-topic" }, `${ctx.youLabel} – ${flappyCardScore(flappyYou)}`),
+        h("div", { class: "card-dispute-topic" }, `${ctx.themLabel} – ${flappyCardScore(flappyThem)}`)
       )
     : null;
 
@@ -536,7 +534,8 @@ function showShareCard(ctx: RevealContext): void {
     "div",
     { class: "share-card", id: "share-card" },
     h("span", { class: "cardmark" }, "Debatable"),
-    scoreEl(ctx.data.score, "cardscore"),
+    h("div", { class: "card-toprow" }, scoreEl(ctx.data.score, "cardscore"), flappyRow),
+    h("div", { class: "card-rule" }),
     h(
       "div",
       { class: "card-dispute" },
@@ -555,7 +554,6 @@ function showShareCard(ctx: RevealContext): void {
           )
     ),
     drawRow,
-    flappyRow,
     h("p", { class: "card-verdict" }, ctx.verdict),
     h(
       "div",
