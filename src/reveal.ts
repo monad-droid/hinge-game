@@ -505,7 +505,7 @@ function showShareCard(ctx: RevealContext): void {
         h(
           "div",
           { class: "card-dispute-topic" },
-          `${ctx.youLabel} ${flappyCardScore(flappyYou)} · ${ctx.themLabel} ${flappyCardScore(flappyThem)}`
+          `${ctx.youLabel}: ${flappyCardScore(flappyYou)} · ${ctx.themLabel}: ${flappyCardScore(flappyThem)}`
         )
       )
     : null;
