@@ -17,6 +17,7 @@
     "db:migrate-saves:local": "wrangler d1 execute debatable-db --local --file=./migrations/0004-card-saves.sql",
     "db:migrate-saves:remote": "wrangler d1 execute debatable-db --remote --file=./migrations/0004-card-saves.sql",
     "stats:saves": "wrangler d1 execute debatable-db --remote --command \"SELECT day, count FROM card_saves ORDER BY day DESC LIMIT 60\"",
+    "stats:games": "wrangler d1 execute debatable-db --remote --command \"SELECT date(created_at/1000,'unixepoch') AS day, COUNT(*) AS created, SUM(p2_submitted_at IS NOT NULL) AS completed FROM games GROUP BY day ORDER BY day DESC\"",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "deploy": "npm run build && wrangler deploy"
   },
