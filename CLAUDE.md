@@ -25,7 +25,8 @@ against production BEFORE deploying** (this bit us three times).
 ```
 index.html            SPA shell (Vite entry; OG/link-preview meta)
 schema.sql            Full D1 schema for FRESH databases
-migrations/           0002-flappy.sql, 0003-drawing.sql (ALTERs for existing DBs)
+migrations/           0002-flappy.sql, 0003-drawing.sql, 0004-card-saves.sql
+                      (ALTERs/CREATEs for existing DBs)
 wrangler.jsonc        Worker + assets (run_worker_first: true) + D1 + daily cron
 shared/               Imported by BOTH worker and frontend
   config.ts           Flags: ENABLE_PREDICTIONS=false, ENABLE_MINIGAME=true,
@@ -92,9 +93,10 @@ P1's. Team drawing score is computed at reveal time, never stored.
    self-play (creator opening own link gets the waiting screen, never P2's
    flow); deliberate bypass via private windows is accepted. Never
    "upgrade" this to fingerprinting/auth.
-6. **Aggregate/global stats do not exist** — deliberately out of scope for
-   v1 (so no minimum-sample threshold applies; don't add stats without an
-   explicit request).
+6. **Aggregate/global stats are opt-in by owner request only.** The one
+   that exists: `card_saves`, an anonymous per-day count of completed
+   "Save image" actions (no game codes, no PII; viewed via
+   `npm run stats:saves`). Don't add more without an explicit request.
 7. **Packs and drawing challenges are versioned, frozen data.** Answers
    are stored as choice indices, so NEVER edit a pack/challenge that has
    games — add `original-v4` / a new challenge and repoint the

@@ -329,6 +329,19 @@ app.get("/api/games/:code/reveal", async (c) => {
   });
 });
 
+// Anonymous counter: bumps today's card_saves row when someone completes
+// "Save image" on the results card. No body, no code, no PII — the only
+// signal is that a save happened. Counts are best-effort and approximate.
+app.post("/api/events/card-save", async (c) => {
+  const day = new Date().toISOString().slice(0, 10);
+  await c.env.DB.prepare(
+    "INSERT INTO card_saves (day, count) VALUES (?, 1) ON CONFLICT(day) DO UPDATE SET count = count + 1"
+  )
+    .bind(day)
+    .run();
+  return c.body(null, 204);
+});
+
 // Both strokes leave the server ONLY here (inside the completed-game
 // reveal), combined with the single deterministic team score.
 function buildDrawingReveal(row: GameRow): RevealResponse["drawing"] {

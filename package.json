@@ -14,6 +14,9 @@
     "db:migrate:remote": "wrangler d1 execute debatable-db --remote --file=./migrations/0002-flappy.sql",
     "db:migrate-drawing:local": "wrangler d1 execute debatable-db --local --file=./migrations/0003-drawing.sql",
     "db:migrate-drawing:remote": "wrangler d1 execute debatable-db --remote --file=./migrations/0003-drawing.sql",
+    "db:migrate-saves:local": "wrangler d1 execute debatable-db --local --file=./migrations/0004-card-saves.sql",
+    "db:migrate-saves:remote": "wrangler d1 execute debatable-db --remote --file=./migrations/0004-card-saves.sql",
+    "stats:saves": "wrangler d1 execute debatable-db --remote --command \"SELECT day, count FROM card_saves ORDER BY day DESC LIMIT 60\"",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "deploy": "npm run build && wrangler deploy"
   },

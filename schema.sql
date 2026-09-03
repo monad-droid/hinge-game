@@ -24,3 +24,10 @@ CREATE TABLE IF NOT EXISTS games (
 );
 
 CREATE INDEX IF NOT EXISTS idx_games_expires_at ON games (expires_at);
+
+-- Anonymous per-day counter of completed "Save image" actions on the
+-- results card. No game codes, no PII — just a date and a count.
+CREATE TABLE IF NOT EXISTS card_saves (
+  day   TEXT PRIMARY KEY, -- UTC date, e.g. 2026-09-03
+  count INTEGER NOT NULL DEFAULT 0
+);

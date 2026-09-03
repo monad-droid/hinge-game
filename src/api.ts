@@ -72,4 +72,14 @@ export const api = {
   getReveal(code: string): Promise<RevealResponse> {
     return request(`/api/games/${encodeURIComponent(code)}/reveal`);
   },
+
+  // Fire-and-forget: bump the anonymous saved-card counter. Never blocks
+  // or breaks the save flow — a lost ping is an acceptable undercount.
+  reportCardSave(): void {
+    try {
+      fetch("/api/events/card-save", { method: "POST", keepalive: true }).catch(() => {});
+    } catch {
+      // ignore — counting is strictly best-effort
+    }
+  },
 };

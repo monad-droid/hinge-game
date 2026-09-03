@@ -4,6 +4,7 @@
 import { BUILT_BY, PUBLIC_DOMAIN, QUESTIONS_PER_GAME } from "../shared/config";
 import { getChallenge } from "../shared/drawing";
 import type { PointTriple } from "../shared/drawing";
+import { api } from "./api";
 
 export interface CardData {
   score: number;
@@ -72,6 +73,7 @@ export async function saveCardImage(data: CardData): Promise<void> {
   if (typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({ files: [file] });
+      api.reportCardSave(); // counted only when the share sheet completes
       return;
     } catch (e) {
       if (e instanceof DOMException && e.name === "AbortError") return; // user closed the sheet
@@ -79,6 +81,7 @@ export async function saveCardImage(data: CardData): Promise<void> {
     }
   }
 
+  api.reportCardSave(); // download path: the file is handed over right here
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
