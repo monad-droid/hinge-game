@@ -393,7 +393,8 @@ h2:focus-visible {
   }
 }
 
-.btn-flight.is-launching::after {
+.btn-flight.is-launching::after,
+.pity-btn.is-launching::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -456,7 +457,9 @@ h2:focus-visible {
   .btn-flight,
   .btn-flight.is-launching,
   .btn-flight.is-launching::after,
-  .pity-btn {
+  .pity-btn,
+  .pity-btn.is-launching,
+  .pity-btn.is-launching::after {
     animation: none;
   }
 }
@@ -550,6 +553,7 @@ h2:focus-visible {
 }
 
 .pity-btn {
+  position: relative; /* anchors the launch ring, same as .btn-flight */
   border: none;
   cursor: pointer;
   width: 100%;
@@ -574,6 +578,11 @@ h2:focus-visible {
   to {
     background-position: 200% 50%;
   }
+}
+
+/* Clicking launches it exactly like the Play button. */
+.pity-btn.is-launching {
+  animation: pity-sweep 3s linear infinite, flight-launch 620ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
 .pity-ghost {

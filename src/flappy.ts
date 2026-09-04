@@ -457,11 +457,21 @@ export function playFlappy(opts: FlappyOptions): void {
           {
             class: "pity-btn",
             onpointerdown: (e: Event) => e.stopPropagation(),
+            // The same send-off as the Play button: launch scale, firework
+            // explosion, confetti, then cut to the run as the burst spends.
             onclick: (e: Event) => {
               e.stopPropagation();
-              zeroRetryUsed = true;
-              overlay.remove();
-              restartRun();
+              const btn = e.currentTarget as HTMLButtonElement;
+              btn.disabled = true;
+              btn.classList.add("is-launching");
+              explodeButton(stage, btn);
+              rainConfetti(stage);
+              const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+              window.setTimeout(() => {
+                zeroRetryUsed = true;
+                overlay.remove();
+                restartRun();
+              }, reduced ? 120 : 620);
             },
           },
           "One more try"
