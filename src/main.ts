@@ -51,9 +51,12 @@ function startPlayer1(): void {
       answers: Answer[],
       prediction: number | null,
       flappy: number | null,
+      flappyRetry: boolean,
       drawing: DrawingSubmission | null
     ) => {
-      const { code } = await api.createGame(answers, ENABLE_PREDICTIONS ? prediction : null, flappy, drawing);
+      const { code } = await api.createGame(
+        answers, ENABLE_PREDICTIONS ? prediction : null, flappy, flappyRetry, drawing
+      );
       setRole(code, "p1");
       history.replaceState(null, "", `/g/${code}`);
       showShare(code, { fresh: true, drew: !!drawing, onReady: () => void goReveal(code) });
@@ -120,12 +123,13 @@ function beginPlayer2(code: string, packId: string, assignedDrawComponent: strin
       answers: Answer[],
       prediction: number | null,
       flappy: number | null,
+      flappyRetry: boolean,
       drawing: DrawingSubmission | null
     ) => {
       try {
         // P2 never names a component — the server derives it from P1's.
         const p2Drawing = drawing ? { points: drawing.points, mulligan: drawing.mulligan } : null;
-        await api.submitP2(code, answers, ENABLE_PREDICTIONS ? prediction : null, flappy, p2Drawing);
+        await api.submitP2(code, answers, ENABLE_PREDICTIONS ? prediction : null, flappy, flappyRetry, p2Drawing);
       } catch (e) {
         if (e instanceof ApiFail && e.kind === "already_settled") {
           await resolveSettledConflict(code, answers);

@@ -25,8 +25,8 @@ against production BEFORE deploying** (this bit us three times).
 ```
 index.html            SPA shell (Vite entry; OG/link-preview meta)
 schema.sql            Full D1 schema for FRESH databases
-migrations/           0002-flappy.sql, 0003-drawing.sql, 0004-card-saves.sql
-                      (ALTERs/CREATEs for existing DBs)
+migrations/           0002-flappy.sql, 0003-drawing.sql, 0004-card-saves.sql,
+                      0005-flappy-retry.sql (ALTERs/CREATEs for existing DBs)
 wrangler.jsonc        Worker + assets (run_worker_first: true) + D1 + daily cron
 shared/               Imported by BOTH worker and frontend
   config.ts           Flags: ENABLE_PREDICTIONS=false, ENABLE_MINIGAME=true,

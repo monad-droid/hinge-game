@@ -43,10 +43,12 @@ interface GameRow {
   p1_answers: string;
   p1_prediction: number | null;
   p1_flappy: number | null;
+  p1_flappy_retry: number | null;
   p1_submitted_at: number;
   p2_answers: string | null;
   p2_prediction: number | null;
   p2_flappy: number | null;
+  p2_flappy_retry: number | null;
   p2_submitted_at: number | null;
   draw_challenge: string | null;
   p1_draw_component: string | null;
@@ -110,6 +112,11 @@ function parseFlappy(value: unknown): { ok: boolean; flappy: number | null } {
     return { ok: true, flappy: value };
   }
   return { ok: false, flappy: null };
+}
+
+// The zero-pity retry marker: only meaningful alongside an actual score.
+function parseFlappyRetry(value: unknown, flappy: number | null): number {
+  return flappy !== null && value === true ? 1 : 0;
 }
 
 // Finish the Drawing submissions. Returns ok:false only for actively
@@ -202,12 +209,13 @@ app.post("/api/games", async (c) => {
     const code = generateCode();
     try {
       await c.env.DB.prepare(
-        `INSERT INTO games (code, pack_id, created_at, expires_at, p1_answers, p1_prediction, p1_flappy, p1_submitted_at,
+        `INSERT INTO games (code, pack_id, created_at, expires_at, p1_answers, p1_prediction, p1_flappy, p1_flappy_retry, p1_submitted_at,
                             draw_challenge, p1_draw_component, p1_draw_points, p1_draw_mulligan)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
         .bind(
-          code, pack.id, now, expiresAt, serializeAnswers(answers), prediction, flappyParsed.flappy, now,
+          code, pack.id, now, expiresAt, serializeAnswers(answers), prediction, flappyParsed.flappy,
+          parseFlappyRetry((body as Record<string, unknown>).flappyRetry, flappyParsed.flappy), now,
           drawParsed.points ? CURRENT_CHALLENGE_ID : null,
           drawParsed.component, drawParsed.points, drawParsed.mulligan
         )
@@ -279,11 +287,15 @@ app.post("/api/games/:code/p2", async (c) => {
   const p2DrawMulligan = p2DrawPoints ? drawParsed.mulligan : null;
 
   const result = await c.env.DB.prepare(
-    `UPDATE games SET p2_answers = ?, p2_prediction = ?, p2_flappy = ?, p2_submitted_at = ?,
+    `UPDATE games SET p2_answers = ?, p2_prediction = ?, p2_flappy = ?, p2_flappy_retry = ?, p2_submitted_at = ?,
                       p2_draw_points = ?, p2_draw_mulligan = ?
      WHERE code = ? AND p2_submitted_at IS NULL`
   )
-    .bind(serializeAnswers(answers), prediction, flappyParsed.flappy, Date.now(), p2DrawPoints, p2DrawMulligan, code)
+    .bind(
+      serializeAnswers(answers), prediction, flappyParsed.flappy,
+      parseFlappyRetry((body as Record<string, unknown>).flappyRetry, flappyParsed.flappy),
+      Date.now(), p2DrawPoints, p2DrawMulligan, code
+    )
     .run();
 
   if (!result.meta.changes) {
@@ -318,11 +330,13 @@ app.get("/api/games/:code/reveal", async (c) => {
       answers: p1,
       prediction: ENABLE_PREDICTIONS ? row.p1_prediction : null,
       flappy: ENABLE_MINIGAME ? row.p1_flappy : null,
+      flappyRetry: ENABLE_MINIGAME && row.p1_flappy_retry === 1,
     },
     p2: {
       answers: p2,
       prediction: ENABLE_PREDICTIONS ? row.p2_prediction : null,
       flappy: ENABLE_MINIGAME ? row.p2_flappy : null,
+      flappyRetry: ENABLE_MINIGAME && row.p2_flappy_retry === 1,
     },
     score,
     drawing: buildDrawingReveal(row),

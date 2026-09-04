@@ -10,7 +10,15 @@ export interface CardData {
   score: number;
   verdict: string;
   disputeTopic: string | null;
-  flappy: { youLabel: string; themLabel: string; you: number | null; them: number | null } | null;
+  flappy: {
+    youLabel: string;
+    themLabel: string;
+    you: number | null;
+    them: number | null;
+    // True when that score came from the zero-pity retry — shown as *.
+    youRetry: boolean;
+    themRetry: boolean;
+  } | null;
   drawing: { challengeId: string; p1: PointTriple[]; p2: PointTriple[]; teamScore: number } | null;
 }
 
@@ -207,10 +215,10 @@ async function renderCardPng(data: CardData): Promise<Blob> {
   // Flappy scores: the right column beside the big score, or squeezed
   // under the drawing thumbnail when that occupies the column.
   if (data.flappy) {
-    const fmt = (label: string, score: number | null) =>
-      `${label} – ${score === null ? "refused" : score}`.toUpperCase();
-    const youLine = fmt(data.flappy.youLabel, data.flappy.you);
-    const themLine = fmt(data.flappy.themLabel, data.flappy.them);
+    const fmt = (label: string, score: number | null, retried: boolean) =>
+      `${label} – ${score === null ? "refused" : `${score}${retried ? "*" : ""}`}`.toUpperCase();
+    const youLine = fmt(data.flappy.youLabel, data.flappy.you, data.flappy.youRetry);
+    const themLine = fmt(data.flappy.themLabel, data.flappy.them, data.flappy.themRetry);
     if (!data.drawing) {
       // Right column hugs the frame: wide enough for its longest line.
       ctx.font = `800 52px ${sans}`;

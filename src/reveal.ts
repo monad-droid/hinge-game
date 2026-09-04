@@ -206,14 +206,19 @@ function afterTiebreaker(ctx: RevealContext): void {
   }
 }
 
-function tiebreakerRow(label: string, score: number | null): HTMLElement {
+// The asterisk marks a score earned via the zero-pity retry.
+function tiebreakerRow(label: string, score: number | null, retried: boolean): HTMLElement {
   return h(
     "div",
     { class: "pred-block" },
     h("span", { class: "side-who" }, label),
     score === null
       ? h("p", { class: "pred-react" }, "Refused to play.")
-      : h("p", { class: "score-huge", style: "font-size: 3rem; margin: 0.15rem 0 0" }, String(score))
+      : h(
+          "p",
+          { class: "score-huge", style: "font-size: 3rem; margin: 0.15rem 0 0" },
+          `${score}${retried ? "*" : ""}`
+        )
   );
 }
 
@@ -226,6 +231,8 @@ function tiebreakerLine(you: number | null, them: number | null): string {
 function showTiebreaker(ctx: RevealContext): void {
   const you = ctx.perspective === "p2" ? ctx.data.p2.flappy : ctx.data.p1.flappy;
   const them = ctx.perspective === "p2" ? ctx.data.p1.flappy : ctx.data.p2.flappy;
+  const youRetry = ctx.perspective === "p2" ? ctx.data.p2.flappyRetry : ctx.data.p1.flappyRetry;
+  const themRetry = ctx.perspective === "p2" ? ctx.data.p1.flappyRetry : ctx.data.p2.flappyRetry;
 
   mount(
     h(
@@ -236,8 +243,8 @@ function showTiebreaker(ctx: RevealContext): void {
         "main",
         { class: "centered" },
         h("h1", { class: "kicker" }, "Flappy results"),
-        tiebreakerRow(ctx.youLabel, you),
-        tiebreakerRow(ctx.themLabel, them),
+        tiebreakerRow(ctx.youLabel, you, youRetry),
+        tiebreakerRow(ctx.themLabel, them, themRetry),
         h("p", { class: "flavor" }, tiebreakerLine(you, them))
       ),
       h(
@@ -485,8 +492,8 @@ export function featuredDispute(ctx: RevealContext): Question | null {
   return disputes[seedHash(ctx.data.code) % disputes.length]!;
 }
 
-function flappyCardScore(score: number | null): string {
-  return score === null ? "refused" : String(score);
+function flappyCardScore(score: number | null, retried: boolean): string {
+  return score === null ? "refused" : `${score}${retried ? "*" : ""}`;
 }
 
 // The reveal ends here: the share card doubles as the final-verdict
@@ -496,6 +503,8 @@ function showShareCard(ctx: RevealContext): void {
   const drawing = ctx.data.drawing;
   const flappyYou = ctx.perspective === "p2" ? ctx.data.p2.flappy : ctx.data.p1.flappy;
   const flappyThem = ctx.perspective === "p2" ? ctx.data.p1.flappy : ctx.data.p2.flappy;
+  const flappyYouRetry = ctx.perspective === "p2" ? ctx.data.p2.flappyRetry : ctx.data.p1.flappyRetry;
+  const flappyThemRetry = ctx.perspective === "p2" ? ctx.data.p1.flappyRetry : ctx.data.p2.flappyRetry;
 
   // Flappy sits top-right beside the big score, mirroring the saved PNG.
   const flappyRow = hasTiebreaker(ctx)
@@ -503,8 +512,8 @@ function showShareCard(ctx: RevealContext): void {
         "div",
         { class: "card-flappy" },
         h("span", { class: "side-who" }, "Flappy"),
-        h("div", { class: "card-dispute-topic" }, `${ctx.youLabel} – ${flappyCardScore(flappyYou)}`),
-        h("div", { class: "card-dispute-topic" }, `${ctx.themLabel} – ${flappyCardScore(flappyThem)}`)
+        h("div", { class: "card-dispute-topic" }, `${ctx.youLabel} – ${flappyCardScore(flappyYou, flappyYouRetry)}`),
+        h("div", { class: "card-dispute-topic" }, `${ctx.themLabel} – ${flappyCardScore(flappyThem, flappyThemRetry)}`)
       )
     : null;
 
@@ -588,7 +597,14 @@ function showShareCard(ctx: RevealContext): void {
                 verdict: ctx.verdict,
                 disputeTopic: dispute ? dispute.topic : null,
                 flappy: hasTiebreaker(ctx)
-                  ? { youLabel: ctx.youLabel, themLabel: ctx.themLabel, you: flappyYou, them: flappyThem }
+                  ? {
+                      youLabel: ctx.youLabel,
+                      themLabel: ctx.themLabel,
+                      you: flappyYou,
+                      them: flappyThem,
+                      youRetry: flappyYouRetry,
+                      themRetry: flappyThemRetry,
+                    }
                   : null,
                 drawing: drawing
                   ? {

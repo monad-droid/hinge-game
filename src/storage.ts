@@ -46,6 +46,8 @@ export function setRole(code: string, role: Role): void {
 export interface Draft {
   answers: Answer[];
   flappy?: number | null;
+  // True when the flappy score came from the zero-pity retry.
+  flappyRetry?: boolean;
   // Set once the drawing round is finished (submission) or sat out (null);
   // absent = not yet offered — that's what makes it one attempt per side.
   drawing?: DrawingSubmission | null;
@@ -58,6 +60,7 @@ export function getDraft(key: string): Draft | null {
     answers: draft.answers.filter((a): a is Answer => a === 0 || a === 1),
   };
   if (typeof draft.flappy === "number" || draft.flappy === null) clean.flappy = draft.flappy;
+  if (typeof draft.flappyRetry === "boolean") clean.flappyRetry = draft.flappyRetry;
   if (draft.drawing === null) {
     clean.drawing = null;
   } else if (

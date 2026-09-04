@@ -29,10 +29,12 @@ export interface GameStatus {
 
 // POST /api/games — creates the game with Player 1's side already locked.
 // flappy is the tiebreaker score: a number, or null if skipped/disabled.
+// flappyRetry marks a score earned via the zero-pity retry.
 export interface CreateGameRequest {
   answers: Answer[];
   prediction: number | null;
   flappy: number | null;
+  flappyRetry: boolean;
   drawing: DrawingSubmission | null;
 }
 
@@ -45,6 +47,7 @@ export interface SubmitP2Request {
   answers: Answer[];
   prediction: number | null;
   flappy: number | null;
+  flappyRetry: boolean;
   drawing: DrawingSubmission | null;
 }
 
@@ -70,6 +73,8 @@ export interface PlayerSide {
   answers: Answer[];
   prediction: number | null;
   flappy: number | null;
+  // True when the flappy score came from the zero-pity retry.
+  flappyRetry: boolean;
 }
 
 export interface ApiError {

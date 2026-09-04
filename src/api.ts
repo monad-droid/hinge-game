@@ -44,11 +44,12 @@ export const api = {
     answers: Answer[],
     prediction: number | null,
     flappy: number | null,
+    flappyRetry: boolean,
     drawing: DrawingSubmission | null
   ): Promise<CreateGameResponse> {
     return request("/api/games", {
       method: "POST",
-      body: JSON.stringify({ answers, prediction, flappy, drawing }),
+      body: JSON.stringify({ answers, prediction, flappy, flappyRetry, drawing }),
     });
   },
 
@@ -61,11 +62,12 @@ export const api = {
     answers: Answer[],
     prediction: number | null,
     flappy: number | null,
+    flappyRetry: boolean,
     drawing: DrawingSubmission | null
   ): Promise<{ ok: true }> {
     return request(`/api/games/${encodeURIComponent(code)}/p2`, {
       method: "POST",
-      body: JSON.stringify({ answers, prediction, flappy, drawing }),
+      body: JSON.stringify({ answers, prediction, flappy, flappyRetry, drawing }),
     });
   },
 

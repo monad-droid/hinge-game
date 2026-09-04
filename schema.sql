@@ -8,10 +8,12 @@ CREATE TABLE IF NOT EXISTS games (
   p1_answers      TEXT NOT NULL,
   p1_prediction   INTEGER,          -- NULL when predictions disabled
   p1_flappy       INTEGER,          -- tiebreaker score; NULL = skipped/disabled
+  p1_flappy_retry INTEGER,          -- 1 = score came from the zero-pity retry
   p1_submitted_at INTEGER NOT NULL,
   p2_answers      TEXT,
   p2_prediction   INTEGER,
   p2_flappy       INTEGER,
+  p2_flappy_retry INTEGER,
   p2_submitted_at INTEGER,
   -- Finish the Drawing: strokes as compact JSON [[x,y,t],...] in master
   -- coordinates. P2's component is always the opposite of P1's.

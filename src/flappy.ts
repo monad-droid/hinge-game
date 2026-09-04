@@ -1,12 +1,13 @@
 // The tiebreaker: a one-attempt flappy game. Classic-arcade look — pixel
 // bird, capped pipes, scrolling ground — drawn from hand-made pixel maps on
-// canvas (original artwork, no image assets). Calls onDone(score) when the
-// run ends and the player continues, or onDone(null) if they skip.
+// canvas (original artwork, no image assets). Calls onDone(score, retried)
+// when the run ends and the player continues (retried = the score came via
+// the zero-pity do-over), or onDone(null, false) if they skip.
 
 import { h, mount, onScreenExit, wordmark } from "./ui";
 
 export interface FlappyOptions {
-  onDone: (score: number | null) => void;
+  onDone: (score: number | null, retried: boolean) => void;
 }
 
 // ——— palette (classic-inspired, our own) ———
@@ -293,7 +294,7 @@ export function playFlappy(opts: FlappyOptions): void {
           onclick: (e: Event) => {
             e.stopPropagation();
             cleanup();
-            opts.onDone(null);
+            opts.onDone(null, false);
           },
         },
         "I'm above this"
@@ -429,7 +430,7 @@ export function playFlappy(opts: FlappyOptions): void {
           onclick: (e: Event) => {
             e.stopPropagation();
             cleanup();
-            opts.onDone(score);
+            opts.onDone(score, zeroRetryUsed);
           },
         },
         "Continue"
@@ -474,7 +475,7 @@ export function playFlappy(opts: FlappyOptions): void {
             onclick: (e: Event) => {
               e.stopPropagation();
               cleanup();
-              opts.onDone(0);
+              opts.onDone(0, false);
             },
           },
           "I meant to do that"

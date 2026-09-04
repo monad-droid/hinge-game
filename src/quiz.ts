@@ -23,6 +23,7 @@ export interface QuizOptions {
     answers: Answer[],
     prediction: number | null,
     flappy: number | null,
+    flappyRetry: boolean,
     drawing: DrawingSubmission | null
   ) => Promise<void>;
 }
@@ -47,20 +48,23 @@ function afterAnswers(
   opts: QuizOptions,
   answers: Answer[],
   flappyMemo?: number | null,
+  flappyRetryMemo?: boolean,
   drawingMemo?: DrawingSubmission | null
 ): void {
   const draft = getDraft(opts.draftKey);
   const flappy = flappyMemo !== undefined ? flappyMemo : draft?.flappy;
   if (ENABLE_MINIGAME && flappy === undefined) {
     playFlappy({
-      onDone: (score) => {
-        setDraft(opts.draftKey, { answers, flappy: score });
-        afterAnswers(opts, answers, score);
+      onDone: (score, retried) => {
+        setDraft(opts.draftKey, { answers, flappy: score, flappyRetry: retried });
+        afterAnswers(opts, answers, score, retried);
       },
     });
     return;
   }
   const settledFlappy = flappy === undefined ? null : flappy;
+  const settledFlappyRetry =
+    flappyRetryMemo !== undefined ? flappyRetryMemo : draft?.flappyRetry ?? false;
 
   // Finish the Drawing: one round per side, remembered like the flappy
   // attempt (memory first, draft as refresh-resume backup).
@@ -70,8 +74,13 @@ function afterAnswers(
       role: opts.drawing.role,
       assigned: opts.drawing.role === "p2" ? opts.drawing.assigned ?? undefined : undefined,
       onDone: (result) => {
-        setDraft(opts.draftKey, { answers, flappy: settledFlappy, drawing: result });
-        afterAnswers(opts, answers, settledFlappy, result);
+        setDraft(opts.draftKey, {
+          answers,
+          flappy: settledFlappy,
+          flappyRetry: settledFlappyRetry,
+          drawing: result,
+        });
+        afterAnswers(opts, answers, settledFlappy, settledFlappyRetry, result);
       },
     });
     return;
@@ -79,10 +88,10 @@ function afterAnswers(
   const settledDrawing = drawing === undefined ? null : drawing;
 
   if (ENABLE_PREDICTIONS) {
-    showPrediction(opts, answers, settledFlappy, settledDrawing);
+    showPrediction(opts, answers, settledFlappy, settledFlappyRetry, settledDrawing);
   } else {
-    void submit(opts, answers, null, settledFlappy, settledDrawing, () =>
-      showSubmitRetry(opts, answers, settledFlappy, settledDrawing)
+    void submit(opts, answers, null, settledFlappy, settledFlappyRetry, settledDrawing, () =>
+      showSubmitRetry(opts, answers, settledFlappy, settledFlappyRetry, settledDrawing)
     );
   }
 }
@@ -94,6 +103,7 @@ function showSubmitRetry(
   opts: QuizOptions,
   answers: Answer[],
   flappy: number | null,
+  flappyRetry: boolean,
   drawing: DrawingSubmission | null
 ): void {
   mount(
@@ -113,8 +123,8 @@ function showSubmitRetry(
             "button",
             {
               class: "btn btn-primary",
-              onclick: () => void submit(opts, answers, null, flappy, drawing, () =>
-                showSubmitRetry(opts, answers, flappy, drawing)
+              onclick: () => void submit(opts, answers, null, flappy, flappyRetry, drawing, () =>
+                showSubmitRetry(opts, answers, flappy, flappyRetry, drawing)
               ),
             },
             "Try again"
@@ -199,6 +209,7 @@ function showPrediction(
   opts: QuizOptions,
   answers: Answer[],
   flappy: number | null,
+  flappyRetry: boolean,
   drawing: DrawingSubmission | null
 ): void {
   let selected: number | null = null;
@@ -237,7 +248,9 @@ function showPrediction(
     if (selected === null) return;
     lockBtn.setAttribute("disabled", "");
     lockBtn.textContent = "Locking…";
-    await submit(opts, answers, selected, flappy, drawing, () => showPrediction(opts, answers, flappy, drawing));
+    await submit(opts, answers, selected, flappy, flappyRetry, drawing, () =>
+      showPrediction(opts, answers, flappy, flappyRetry, drawing)
+    );
   };
 
   mount(
@@ -268,11 +281,12 @@ async function submit(
   answers: Answer[],
   prediction: number | null,
   flappy: number | null,
+  flappyRetry: boolean,
   drawing: DrawingSubmission | null,
   retryScreen: () => void
 ): Promise<void> {
   try {
-    await opts.onComplete(answers, prediction, flappy, drawing);
+    await opts.onComplete(answers, prediction, flappy, flappyRetry, drawing);
     clearDraft(opts.draftKey);
   } catch {
     // Completion handlers throw only for retryable failures (network etc.);
