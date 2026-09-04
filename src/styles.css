@@ -403,6 +403,12 @@ h2:focus-visible {
   animation: flight-ring 620ms ease-out forwards;
 }
 
+/* The pity button is rounded, so its shockwave echoes the same shape —
+   a square ring over the light card read as a stray white rectangle. */
+.pity-btn.is-launching::after {
+  border-radius: 12px;
+}
+
 @keyframes flight-ring {
   from {
     opacity: 1;
