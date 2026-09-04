@@ -504,59 +504,77 @@ h2:focus-visible {
   animation: screen-in 200ms ease-out both;
 }
 
-/* Arcade variant: the game world stays visible behind a light scrim and
-   the text matches the in-game "TAP TO FLAP" look — chunky white type
-   with the dark pixel outline (8-way text-shadow: works in every
-   webview, unlike text-stroke paint-order). */
-.flappy-overlay-arcade {
-  background: rgba(41, 35, 26, 0.35);
+/* Zero-pity prompt: a light card floating over the dimmed game world
+   (the crash site stays visible behind the scrim). */
+.flappy-overlay-scrim {
+  background: rgba(25, 21, 18, 0.55);
   align-items: center;
+  justify-content: center;
+}
+
+.pity-card {
+  background: var(--paper);
+  border-radius: 18px;
+  padding: 2.25rem 1.6rem 1.9rem;
+  width: min(100%, 350px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1rem;
   text-align: center;
-  gap: 0.4rem;
+  box-shadow: 0 18px 50px rgba(25, 21, 18, 0.4);
 }
 
-.arcade-text {
+.pity-title {
   margin: 0;
+  font-size: 1.9rem;
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+}
+
+.pity-rule {
+  width: 46px;
+  height: 2px;
+  background: var(--ink);
+  opacity: 0.3;
+}
+
+.pity-sub {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1.02rem;
+  line-height: 1.45;
+  max-width: 27ch;
+}
+
+.pity-btn {
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 1.05rem 1rem;
+  border-radius: 12px;
+  background: linear-gradient(95deg, #e6308a, #ff7a00);
   color: #fff;
-  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  font-weight: 900;
+  font-weight: 800;
+  font-size: 1rem;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
-  line-height: 1.25;
-  text-shadow:
-    -3px -3px 0 #29231a, 3px -3px 0 #29231a, -3px 3px 0 #29231a, 3px 3px 0 #29231a,
-    -3px 0 0 #29231a, 3px 0 0 #29231a, 0 -3px 0 #29231a, 0 3px 0 #29231a;
 }
 
-.arcade-score {
-  font-size: 6rem;
-  line-height: 1;
-  text-shadow:
-    -5px -5px 0 #29231a, 5px -5px 0 #29231a, -5px 5px 0 #29231a, 5px 5px 0 #29231a,
-    -5px 0 0 #29231a, 5px 0 0 #29231a, 0 -5px 0 #29231a, 0 5px 0 #29231a,
-    0 10px 0 rgba(41, 35, 26, 0.55);
-}
-
-.arcade-line {
-  font-size: 1.5rem;
-}
-
-.arcade-sub {
-  font-size: 0.95rem;
-  max-width: 30ch;
-  text-shadow:
-    -2px -2px 0 #29231a, 2px -2px 0 #29231a, -2px 2px 0 #29231a, 2px 2px 0 #29231a,
-    -2px 0 0 #29231a, 2px 0 0 #29231a, 0 -2px 0 #29231a, 0 2px 0 #29231a;
-}
-
-.arcade-ghost {
+.pity-ghost {
   background: none;
   border: none;
-  padding: 0.6rem 1rem;
   cursor: pointer;
+  padding: 0.35rem 0.75rem;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 0.88rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   text-decoration: underline;
-  text-underline-offset: 3px;
-  font-size: 1rem;
+  text-underline-offset: 4px;
 }
 
 /* ————— finish the drawing ————— */
