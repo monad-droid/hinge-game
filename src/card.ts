@@ -215,31 +215,45 @@ async function renderCardPng(data: CardData): Promise<Blob> {
   // Flappy scores: the right column beside the big score, or squeezed
   // under the drawing thumbnail when that occupies the column.
   if (data.flappy) {
-    const fmt = (label: string, score: number | null, retried: boolean) =>
-      `${label} – ${score === null ? "refused" : `${score}${retried ? "*" : ""}`}`.toUpperCase();
-    const youLine = fmt(data.flappy.youLabel, data.flappy.you, data.flappy.youRetry);
-    const themLine = fmt(data.flappy.themLabel, data.flappy.them, data.flappy.themRetry);
+    const fmt = (label: string, score: number | null) =>
+      `${label} – ${score === null ? "refused" : score}`.toUpperCase();
+    const youLine = fmt(data.flappy.youLabel, data.flappy.you);
+    const themLine = fmt(data.flappy.themLabel, data.flappy.them);
+    const youStar = data.flappy.you !== null && data.flappy.youRetry;
+    const themStar = data.flappy.them !== null && data.flappy.themRetry;
+    // Draws a line plus, on retry scores, a smaller asterisk raised to the
+    // top of the digits (the * baked into the string would render full-size).
+    const drawFlappyLine = (text: string, star: boolean, x: number, y: number, px: number) => {
+      ctx.font = `800 ${px}px ${sans}`;
+      ctx.fillText(text, x, y);
+      if (star) {
+        const w = ctx.measureText(text).width;
+        ctx.font = `800 ${Math.round(px * 0.6)}px ${sans}`;
+        ctx.fillText("*", x + w + 3, y - Math.round(px * 0.5));
+      }
+    };
     if (!data.drawing) {
-      // Right column hugs the frame: wide enough for its longest line.
+      // Right column hugs the frame: wide enough for its longest line
+      // (a raised asterisk adds a little width of its own).
       ctx.font = `800 52px ${sans}`;
-      const colWidth = Math.max(ctx.measureText(youLine).width, ctx.measureText(themLine).width, 240);
+      const lineWidth = (text: string, star: boolean) =>
+        ctx.measureText(text).width + (star ? 34 : 0);
+      const colWidth = Math.max(lineWidth(youLine, youStar), lineWidth(themLine, themStar), 240);
       const fx = W - margin - colWidth;
       ctx.fillStyle = ACCENT;
       ctx.font = `800 28px ${sans}`;
       drawTracked(ctx, "FLAPPY", fx, 270, 4);
       ctx.fillStyle = INK;
-      ctx.font = `800 52px ${sans}`;
-      ctx.fillText(youLine, fx, 350);
-      ctx.fillText(themLine, fx, 420);
+      drawFlappyLine(youLine, youStar, fx, 350, 52);
+      drawFlappyLine(themLine, themStar, fx, 420, 52);
     } else {
       const fx = W - margin - 300;
       ctx.fillStyle = ACCENT;
       ctx.font = `800 24px ${sans}`;
       drawTracked(ctx, "FLAPPY", fx, 636, 3);
       ctx.fillStyle = INK;
-      ctx.font = `800 36px ${sans}`;
-      ctx.fillText(youLine, fx, 688);
-      ctx.fillText(themLine, fx, 736);
+      drawFlappyLine(youLine, youStar, fx, 688, 36);
+      drawFlappyLine(themLine, themStar, fx, 736, 36);
     }
   }
 

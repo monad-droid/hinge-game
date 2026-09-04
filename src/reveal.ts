@@ -493,8 +493,16 @@ export function featuredDispute(ctx: RevealContext): Question | null {
   return disputes[seedHash(ctx.data.code) % disputes.length]!;
 }
 
-function flappyCardScore(score: number | null, retried: boolean): string {
-  return score === null ? "refused" : `${score}${retried ? "*" : ""}`;
+// One card line ("You – 4"), with a small raised asterisk on retry scores.
+function flappyCardLine(label: string, score: number | null, retried: boolean): HTMLElement {
+  return h(
+    "div",
+    { class: "card-dispute-topic" },
+    `${label} – ${score === null ? "refused" : score}`,
+    score !== null && retried
+      ? h("span", { style: "font-size: 0.6em; vertical-align: 0.5em" }, "*")
+      : null
+  );
 }
 
 // The reveal ends here: the share card doubles as the final-verdict
@@ -513,8 +521,8 @@ function showShareCard(ctx: RevealContext): void {
         "div",
         { class: "card-flappy" },
         h("span", { class: "side-who" }, "Flappy"),
-        h("div", { class: "card-dispute-topic" }, `${ctx.youLabel} – ${flappyCardScore(flappyYou, flappyYouRetry)}`),
-        h("div", { class: "card-dispute-topic" }, `${ctx.themLabel} – ${flappyCardScore(flappyThem, flappyThemRetry)}`)
+        flappyCardLine(ctx.youLabel, flappyYou, flappyYouRetry),
+        flappyCardLine(ctx.themLabel, flappyThem, flappyThemRetry)
       )
     : null;
 
