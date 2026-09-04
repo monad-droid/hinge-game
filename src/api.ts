@@ -45,11 +45,12 @@ export const api = {
     prediction: number | null,
     flappy: number | null,
     flappyRetry: boolean,
-    drawing: DrawingSubmission | null
+    drawing: DrawingSubmission | null,
+    firstGame: boolean
   ): Promise<CreateGameResponse> {
     return request("/api/games", {
       method: "POST",
-      body: JSON.stringify({ answers, prediction, flappy, flappyRetry, drawing }),
+      body: JSON.stringify({ answers, prediction, flappy, flappyRetry, drawing, firstGame }),
     });
   },
 

@@ -33,6 +33,9 @@ import type {
 interface Env {
   DB: D1Database;
   ASSETS: Fetcher;
+  // Owner's dashboard key (wrangler secret put STATS_KEY). Unset = the
+  // /stats endpoints don't exist.
+  STATS_KEY?: string;
 }
 
 interface GameRow {
@@ -220,6 +223,7 @@ app.post("/api/games", async (c) => {
           drawParsed.component, drawParsed.points, drawParsed.mulligan
         )
         .run();
+      await bumpGameStats(c.env.DB, "created", (body as Record<string, unknown>).firstGame === true);
       return c.json<CreateGameResponse>({ code }, 201);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -301,6 +305,7 @@ app.post("/api/games/:code/p2", async (c) => {
   if (!result.meta.changes) {
     return err(c, 409, "already_settled", "Looks like this one is already settled.");
   }
+  await bumpGameStats(c.env.DB, "completed");
   return c.json({ ok: true }, 200);
 });
 
@@ -343,6 +348,28 @@ app.get("/api/games/:code/reveal", async (c) => {
   });
 });
 
+// Per-day aggregate counters for the owner dashboard. Best-effort: a
+// failed bump never breaks gameplay.
+async function bumpGameStats(
+  db: D1Database,
+  field: "created" | "completed",
+  newCreator = false
+): Promise<void> {
+  const day = new Date().toISOString().slice(0, 10);
+  try {
+    await db
+      .prepare(
+        field === "created"
+          ? "INSERT INTO game_stats (day, created, new_creators) VALUES (?, 1, ?) ON CONFLICT(day) DO UPDATE SET created = created + 1, new_creators = new_creators + ?"
+          : "INSERT INTO game_stats (day, completed) VALUES (?, 1) ON CONFLICT(day) DO UPDATE SET completed = completed + 1"
+      )
+      .bind(...(field === "created" ? [day, newCreator ? 1 : 0, newCreator ? 1 : 0] : [day]))
+      .run();
+  } catch {
+    // table missing or transient failure — stats are best-effort
+  }
+}
+
 // Anonymous counter: bumps today's card_saves row when someone completes
 // "Save image" on the results card. No body, no code, no PII — the only
 // signal is that a save happened. Counts are best-effort and approximate.
@@ -355,6 +382,142 @@ app.post("/api/events/card-save", async (c) => {
     .run();
   return c.body(null, 204);
 });
+
+// ---------- owner stats (key-protected; requires the STATS_KEY secret) ----------
+
+function statsKeyOk(c: Context<{ Bindings: Env }>): boolean {
+  const secret = c.env.STATS_KEY;
+  if (!secret) return false; // secret unset → the dashboard doesn't exist
+  const given = c.req.header("x-stats-key") ?? c.req.query("key") ?? "";
+  if (given.length !== secret.length) return false;
+  let diff = 0;
+  for (let i = 0; i < secret.length; i++) diff |= given.charCodeAt(i) ^ secret.charCodeAt(i);
+  return diff === 0;
+}
+
+app.get("/api/stats", async (c) => {
+  if (!statsKeyOk(c)) return err(c, 404, "not_found", "No such endpoint.");
+
+  const [statRows, saveRows, live] = await Promise.all([
+    c.env.DB.prepare("SELECT day, created, completed, new_creators FROM game_stats ORDER BY day DESC LIMIT 90").all(),
+    c.env.DB.prepare("SELECT day, count FROM card_saves ORDER BY day DESC LIMIT 90").all(),
+    c.env.DB.prepare("SELECT COUNT(*) AS games, SUM(p2_submitted_at IS NOT NULL) AS completed FROM games").first<{
+      games: number;
+      completed: number | null;
+    }>(),
+  ]);
+
+  const days = new Map<string, { day: string; created: number; completed: number; newCreators: number; saves: number }>();
+  const rowFor = (day: string) => {
+    let r = days.get(day);
+    if (!r) {
+      r = { day, created: 0, completed: 0, newCreators: 0, saves: 0 };
+      days.set(day, r);
+    }
+    return r;
+  };
+  for (const r of statRows.results as { day: string; created: number; completed: number; new_creators: number }[]) {
+    Object.assign(rowFor(r.day), { created: r.created, completed: r.completed, newCreators: r.new_creators });
+  }
+  for (const r of saveRows.results as { day: string; count: number }[]) {
+    rowFor(r.day).saves = r.count;
+  }
+  const list = [...days.values()].sort((a, b) => (a.day < b.day ? 1 : -1));
+  const total = (f: "created" | "completed" | "newCreators" | "saves") => list.reduce((n, r) => n + r[f], 0);
+
+  return c.json({
+    // Counters accrue from the day this feature shipped.
+    totals: {
+      created: total("created"),
+      completed: total("completed"),
+      newCreators: total("newCreators"),
+      saves: total("saves"),
+    },
+    // Live table: every game currently on record (rolling ~30-day window).
+    window: { games: live?.games ?? 0, completed: live?.completed ?? 0 },
+    days: list,
+  });
+});
+
+// The dashboard page. Served from the worker only — nothing about it
+// exists in the public app bundle. Harmless if discovered: it renders a
+// key prompt, and without the key the API 404s.
+app.get("/stats", (c) => {
+  return c.html(STATS_PAGE, 200, {
+    "Cache-Control": "no-store",
+    "X-Robots-Tag": "noindex, nofollow",
+  });
+});
+
+const STATS_PAGE = `<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Debatable — owner stats</title>
+<style>
+  :root { --paper:#f6f1e7; --ink:#191512; --accent:#ff4d00; --muted:rgba(25,21,18,0.55); }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink);
+         font:16px/1.5 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; padding:24px; }
+  main { max-width:560px; margin:0 auto; }
+  h1 { font-weight:800; letter-spacing:0.28em; text-transform:uppercase; font-size:0.85rem; margin:0 0 1.5rem; }
+  h1 em { color:var(--accent); font-style:normal; }
+  .tiles { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:0 0 1.5rem; }
+  .tile { border:2px solid var(--ink); padding:0.9rem 1rem 0.8rem; background:#fffdf8; }
+  .tile b { display:block; font-size:2rem; line-height:1.1; }
+  .tile span { font-size:0.72rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); }
+  .note { color:var(--muted); font-size:0.85rem; margin:0.75rem 0 1.5rem; }
+  table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+  th,td { text-align:right; padding:0.45rem 0.5rem; border-bottom:1px solid rgba(25,21,18,0.15); }
+  th:first-child,td:first-child { text-align:left; }
+  th { font-size:0.7rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); }
+  form { display:flex; gap:8px; margin:2rem 0; }
+  input { flex:1; padding:0.8rem; border:2px solid var(--ink); background:#fffdf8; font:inherit; }
+  button { padding:0.8rem 1.2rem; border:2px solid var(--ink); background:var(--ink); color:#fff;
+           font:inherit; font-weight:700; cursor:pointer; }
+  .err { color:var(--accent); font-weight:700; }
+</style></head>
+<body><main>
+<h1>DEBAT<em>ABLE</em> · owner stats</h1>
+<div id="app">Loading…</div>
+<script>
+const app = document.getElementById("app");
+const KEY = "debatable.statskey";
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function askKey(msg){
+  app.innerHTML = (msg ? '<p class="err">'+esc(msg)+'</p>' : '') +
+    '<form id="f"><input id="k" type="password" placeholder="Stats key" autofocus><button>Open</button></form>';
+  document.getElementById("f").onsubmit = (e) => {
+    e.preventDefault();
+    try { localStorage.setItem(KEY, document.getElementById("k").value); } catch {}
+    void load(document.getElementById("k").value);
+  };
+}
+async function load(key){
+  const res = await fetch("/api/stats", { headers: { "x-stats-key": key } }).catch(() => null);
+  if (!res || !res.ok) { askKey(res && res.status === 404 ? "Wrong key." : "Couldn't load."); return; }
+  const d = await res.json();
+  const tiles = [
+    [d.totals.created, "Games started"],
+    [d.totals.completed, "Responses"],
+    [d.totals.created ? Math.round(100 * d.totals.completed / d.totals.created) + "%" : "—", "Response rate"],
+    [d.totals.newCreators, "New creators*"],
+    [d.totals.saves, "Card saves"],
+    [d.window.games + " / " + d.window.completed, "On record now / done"],
+  ].map(([v, l]) => '<div class="tile"><b>'+esc(v)+'</b><span>'+esc(l)+'</span></div>').join("");
+  const rows = d.days.map(r =>
+    '<tr><td>'+esc(r.day)+'</td><td>'+r.created+'</td><td>'+r.completed+'</td><td>'+r.newCreators+'</td><td>'+r.saves+'</td></tr>'
+  ).join("");
+  app.innerHTML = '<div class="tiles">'+tiles+'</div>' +
+    '<p class="note">*A browser\\u2019s first-ever game, self-reported \\u2014 the closest thing to \\u201cunique users\\u201d this app will ever measure (no accounts, no tracking). Counters accrue from the day this dashboard shipped; \\u201cOn record\\u201d is the live rolling ~30-day games table.</p>' +
+    '<table><tr><th>Day</th><th>Started</th><th>Done</th><th>New</th><th>Saves</th></tr>'+rows+'</table>';
+}
+let saved = null;
+try { saved = localStorage.getItem(KEY); } catch {}
+if (saved) void load(saved); else askKey();
+</script>
+</main></body></html>`;
 
 // Both strokes leave the server ONLY here (inside the completed-game
 // reveal), combined with the single deterministic team score.

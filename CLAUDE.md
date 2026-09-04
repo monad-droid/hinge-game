@@ -93,10 +93,14 @@ P1's. Team drawing score is computed at reveal time, never stored.
    self-play (creator opening own link gets the waiting screen, never P2's
    flow); deliberate bypass via private windows is accepted. Never
    "upgrade" this to fingerprinting/auth.
-6. **Aggregate/global stats are opt-in by owner request only.** The one
-   that exists: `card_saves`, an anonymous per-day count of completed
-   "Save image" actions (no game codes, no PII; viewed via
-   `npm run stats:saves`). Don't add more without an explicit request.
+6. **Aggregate/global stats are opt-in by owner request only.** What
+   exists: `card_saves` (per-day completed "Save image" count) and
+   `game_stats` (per-day created/completed/new_creators, where
+   new_creators is one self-declared "first game from this browser" bit
+   — never an identifier). Both feed the key-protected owner dashboard
+   at `/stats` (worker-served, absent from the app bundle; requires the
+   `STATS_KEY` wrangler secret — unset means the endpoints 404). No game
+   codes, no PII anywhere. Don't add more without an explicit request.
 7. **Packs and drawing challenges are versioned, frozen data.** Answers
    are stored as choice indices, so NEVER edit a pack/challenge that has
    games — add `original-v4` / a new challenge and repoint the

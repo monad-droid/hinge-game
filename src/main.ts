@@ -15,7 +15,7 @@ import {
   showP2Intro,
   showShare,
 } from "./screens";
-import { getDraft, getRole, setRole } from "./storage";
+import { getDraft, getRole, hasCreatedBefore, markCreated, setRole } from "./storage";
 import type { Role } from "./storage";
 
 function navigate(path: string): void {
@@ -56,8 +56,10 @@ function startPlayer1(): void {
       drawing: DrawingSubmission | null
     ) => {
       const { code } = await api.createGame(
-        answers, ENABLE_PREDICTIONS ? prediction : null, flappy, flappyRetry, drawing
+        answers, ENABLE_PREDICTIONS ? prediction : null, flappy, flappyRetry, drawing,
+        !hasCreatedBefore()
       );
+      markCreated();
       setRole(code, "p1");
       history.replaceState(null, "", `/g/${code}`);
       // Role passed in memory: if storage is unavailable (private mode,

@@ -80,3 +80,13 @@ export function setDraft(key: string, draft: Draft): void {
 export function clearDraft(key: string): void {
   remove(`draft.${key}`);
 }
+
+// One anonymous bit for aggregate stats: has this browser ever created a
+// game? Self-declared, per-browser, never an identifier.
+export function hasCreatedBefore(): boolean {
+  return read<boolean>("creator") === true;
+}
+
+export function markCreated(): void {
+  write("creator", true);
+}

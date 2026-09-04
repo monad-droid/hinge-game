@@ -33,3 +33,13 @@ CREATE TABLE IF NOT EXISTS card_saves (
   day   TEXT PRIMARY KEY, -- UTC date, e.g. 2026-09-03
   count INTEGER NOT NULL DEFAULT 0
 );
+
+-- Per-day counters that survive the game cleanup, for the owner's
+-- key-protected /stats dashboard. new_creators counts games whose
+-- creating browser self-reported "first game here" (one anonymous bit).
+CREATE TABLE IF NOT EXISTS game_stats (
+  day          TEXT PRIMARY KEY, -- UTC date
+  created      INTEGER NOT NULL DEFAULT 0,
+  completed    INTEGER NOT NULL DEFAULT 0,
+  new_creators INTEGER NOT NULL DEFAULT 0
+);

@@ -36,6 +36,10 @@ export interface CreateGameRequest {
   flappy: number | null;
   flappyRetry: boolean;
   drawing: DrawingSubmission | null;
+  // One anonymous, self-declared bit: this browser hadn't created a game
+  // before. Feeds the owner's aggregate new-creators counter — never an
+  // identifier.
+  firstGame: boolean;
 }
 
 export interface CreateGameResponse {
