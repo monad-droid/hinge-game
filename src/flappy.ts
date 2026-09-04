@@ -439,21 +439,23 @@ export function playFlappy(opts: FlappyOptions): void {
     overlay.querySelector("button")?.focus();
   };
 
+  // Styled like the game, not the app: the world (and the crash site) stay
+  // visible behind a scrim, the text wears the TAP TO FLAP outline, and
+  // the retry button is the same rainbow flight button as Play.
   const showZeroRetry = () => {
     const overlay = h(
       "div",
-      { class: "flappy-overlay flappy-overlay-fade" },
-      h("p", { class: "kicker" }, "Final distance"),
-      h("p", { class: "score-huge" }, "0"),
-      h("p", { class: "verdict-line" }, "Immediate ground contact."),
-      h("p", { class: "sub" }, "Look. We don't normally do this. But that was hard to watch."),
+      { class: "flappy-overlay flappy-overlay-arcade flappy-overlay-fade" },
+      h("p", { class: "arcade-text arcade-score" }, "0"),
+      h("p", { class: "arcade-text arcade-line" }, "Immediate ground contact."),
+      h("p", { class: "arcade-text arcade-sub" }, "Look. We don't normally do this. But that was hard to watch."),
       h(
         "div",
         { class: "stack mt" },
         h(
           "button",
           {
-            class: "btn btn-primary",
+            class: "btn btn-flight",
             onpointerdown: (e: Event) => e.stopPropagation(),
             onclick: (e: Event) => {
               e.stopPropagation();
@@ -467,7 +469,7 @@ export function playFlappy(opts: FlappyOptions): void {
         h(
           "button",
           {
-            class: "btn-ghost btn",
+            class: "arcade-ghost arcade-text",
             onpointerdown: (e: Event) => e.stopPropagation(),
             onclick: (e: Event) => {
               e.stopPropagation();

@@ -504,6 +504,61 @@ h2:focus-visible {
   animation: screen-in 200ms ease-out both;
 }
 
+/* Arcade variant: the game world stays visible behind a light scrim and
+   the text matches the in-game "TAP TO FLAP" look — chunky white type
+   with the dark pixel outline (8-way text-shadow: works in every
+   webview, unlike text-stroke paint-order). */
+.flappy-overlay-arcade {
+  background: rgba(41, 35, 26, 0.35);
+  align-items: center;
+  text-align: center;
+  gap: 0.4rem;
+}
+
+.arcade-text {
+  margin: 0;
+  color: #fff;
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+  text-shadow:
+    -3px -3px 0 #29231a, 3px -3px 0 #29231a, -3px 3px 0 #29231a, 3px 3px 0 #29231a,
+    -3px 0 0 #29231a, 3px 0 0 #29231a, 0 -3px 0 #29231a, 0 3px 0 #29231a;
+}
+
+.arcade-score {
+  font-size: 6rem;
+  line-height: 1;
+  text-shadow:
+    -5px -5px 0 #29231a, 5px -5px 0 #29231a, -5px 5px 0 #29231a, 5px 5px 0 #29231a,
+    -5px 0 0 #29231a, 5px 0 0 #29231a, 0 -5px 0 #29231a, 0 5px 0 #29231a,
+    0 10px 0 rgba(41, 35, 26, 0.55);
+}
+
+.arcade-line {
+  font-size: 1.5rem;
+}
+
+.arcade-sub {
+  font-size: 0.95rem;
+  max-width: 30ch;
+  text-shadow:
+    -2px -2px 0 #29231a, 2px -2px 0 #29231a, -2px 2px 0 #29231a, 2px 2px 0 #29231a,
+    -2px 0 0 #29231a, 2px 0 0 #29231a, 0 -2px 0 #29231a, 0 2px 0 #29231a;
+}
+
+.arcade-ghost {
+  background: none;
+  border: none;
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: 1rem;
+}
+
 /* ————— finish the drawing ————— */
 
 .ref-frame {
