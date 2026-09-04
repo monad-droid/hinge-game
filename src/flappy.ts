@@ -477,7 +477,7 @@ export function playFlappy(opts: FlappyOptions): void {
               opts.onDone(0, false);
             },
           },
-          "I meant to do that"
+          "I'm keeping the 0"
         )
       )
     );
