@@ -393,13 +393,35 @@ export function playFlappy(opts: FlappyOptions): void {
     setTimeout(showResult, 450);
   };
 
+  // A zero earns pity: one offer to go again. Only zeros, only once —
+  // any score that clears a single pipe is final, same as always.
+  let zeroRetryUsed = false;
+
+  const restartRun = () => {
+    birdY = restY;
+    velocity = 0;
+    score = 0;
+    pipes = [];
+    nextPipeX = W + 140;
+    scrollX = 0;
+    lastTime = 0;
+    phase = "ready";
+    raf = requestAnimationFrame(frame);
+  };
+
   const showResult = () => {
+    if (score === 0 && !zeroRetryUsed) {
+      showZeroRetry();
+      return;
+    }
+    const line =
+      score === 0 && zeroRetryUsed ? "Immediate ground contact. Again." : resultLine(score);
     const overlay = h(
       "div",
       { class: "flappy-overlay flappy-overlay-fade" },
       h("p", { class: "kicker" }, "Final distance"),
       h("p", { class: "score-huge" }, String(score)),
-      h("p", { class: "verdict-line" }, resultLine(score)),
+      h("p", { class: "verdict-line" }, line),
       h(
         "button",
         {
@@ -411,6 +433,50 @@ export function playFlappy(opts: FlappyOptions): void {
           },
         },
         "Continue"
+      )
+    );
+    stage.append(overlay);
+    overlay.querySelector("button")?.focus();
+  };
+
+  const showZeroRetry = () => {
+    const overlay = h(
+      "div",
+      { class: "flappy-overlay flappy-overlay-fade" },
+      h("p", { class: "kicker" }, "Final distance"),
+      h("p", { class: "score-huge" }, "0"),
+      h("p", { class: "verdict-line" }, "Immediate ground contact."),
+      h("p", { class: "sub" }, "Look. We don't normally do this. But that was hard to watch."),
+      h(
+        "div",
+        { class: "stack mt" },
+        h(
+          "button",
+          {
+            class: "btn btn-primary",
+            onpointerdown: (e: Event) => e.stopPropagation(),
+            onclick: (e: Event) => {
+              e.stopPropagation();
+              zeroRetryUsed = true;
+              overlay.remove();
+              restartRun();
+            },
+          },
+          "One more try"
+        ),
+        h(
+          "button",
+          {
+            class: "btn-ghost btn",
+            onpointerdown: (e: Event) => e.stopPropagation(),
+            onclick: (e: Event) => {
+              e.stopPropagation();
+              cleanup();
+              opts.onDone(0);
+            },
+          },
+          "I meant to do that"
+        )
       )
     );
     stage.append(overlay);
