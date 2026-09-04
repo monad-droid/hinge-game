@@ -2,7 +2,7 @@
 // swapped without touching game logic or UI components.
 
 export const APP_NAME = "Debatable";
-export const BUILT_BY = "Built by David from Hinge";
+export const BUILT_BY = "by David from Hinge";
 export const PUBLIC_DOMAIN = "debatable.lol";
 export const GAME_EXPIRATION_DAYS = 30;
 // Off for now — the "how alike do you think you are?" step is on trial.
