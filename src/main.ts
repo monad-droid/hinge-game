@@ -16,6 +16,7 @@ import {
   showShare,
 } from "./screens";
 import { getDraft, getRole, setRole } from "./storage";
+import type { Role } from "./storage";
 
 function navigate(path: string): void {
   history.pushState(null, "", path);
@@ -59,7 +60,9 @@ function startPlayer1(): void {
       );
       setRole(code, "p1");
       history.replaceState(null, "", `/g/${code}`);
-      showShare(code, { fresh: true, drew: !!drawing, onReady: () => void goReveal(code) });
+      // Role passed in memory: if storage is unavailable (private mode,
+      // locked-down webviews) the reveal must still know who "You" is.
+      showShare(code, { fresh: true, drew: !!drawing, onReady: () => void goReveal(code, "p1") });
     },
   });
 }
@@ -82,7 +85,7 @@ async function enterGame(code: string): Promise<void> {
     if (role === "p1") {
       // The creator opened their own link — show waiting, never Player 2's
       // flow, so a browser can't accidentally play against itself.
-      showShare(code, { fresh: false, onReady: () => void goReveal(code) });
+      showShare(code, { fresh: false, onReady: () => void goReveal(code, "p1") });
     } else {
       const draft = getDraft(`p2.${code}`);
       const assigned =
@@ -142,7 +145,11 @@ function beginPlayer2(code: string, packId: string, assignedDrawComponent: strin
         throw e; // network etc. — the quiz shows a retry
       }
       setRole(code, "p2");
-      void goReveal(code);
+      // Pass the role directly: this browser just submitted as Player 2,
+      // and localStorage may be unavailable (private mode, webviews) —
+      // reading the role back would silently flip the reveal to the
+      // creator's perspective.
+      void goReveal(code, "p2");
     },
   });
 }
@@ -166,11 +173,11 @@ async function resolveSettledConflict(code: string, attempted: Answer[]): Promis
 
 // ————— reveal —————
 
-async function goReveal(code: string): Promise<void> {
+async function goReveal(code: string, knownRole?: Role): Promise<void> {
   showLoading();
   try {
     const reveal = await api.getReveal(code);
-    startReveal(reveal, getRole(code), goHome);
+    startReveal(reveal, knownRole ?? getRole(code), goHome);
   } catch (e) {
     if (e instanceof ApiFail && e.kind === "not_ready") {
       // Direct navigation to a reveal that isn't ready yet.
