@@ -218,7 +218,7 @@ function tiebreakerRow(label: string, score: number | null, retried: boolean): H
           "p",
           { class: "score-huge", style: "font-size: 3rem; margin: 0.15rem 0 0" },
           String(score),
-          retried ? h("span", { style: "font-size: 0.4em; vertical-align: 0.65em" }, "*") : null
+          retried ? h("span", { style: "font-size: 0.4em; vertical-align: 1.15em" }, "*") : null
         )
   );
 }
