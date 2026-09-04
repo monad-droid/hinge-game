@@ -455,7 +455,8 @@ h2:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .btn-flight,
   .btn-flight.is-launching,
-  .btn-flight.is-launching::after {
+  .btn-flight.is-launching::after,
+  .pity-btn {
     animation: none;
   }
 }
@@ -555,12 +556,24 @@ h2:focus-visible {
   margin-top: 0.35rem;
   padding: 1.05rem 1rem;
   border-radius: 12px;
-  background: linear-gradient(95deg, #e6308a, #ff7a00);
+  /* Endpoints match so the sweep loops seamlessly, like the Play button. */
+  background: linear-gradient(95deg, #e6308a, #ff7a00, #e6308a);
+  background-size: 200% 100%;
+  animation: pity-sweep 3s linear infinite;
   color: #fff;
   font-weight: 800;
   font-size: 1rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+}
+
+@keyframes pity-sweep {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 200% 50%;
+  }
 }
 
 .pity-ghost {
