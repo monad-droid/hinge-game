@@ -20,6 +20,7 @@
     "db:migrate-retry:remote": "wrangler d1 execute debatable-db --remote --file=./migrations/0005-flappy-retry.sql",
     "db:migrate-gamestats:local": "wrangler d1 execute debatable-db --local --file=./migrations/0006-game-stats.sql",
     "db:migrate-gamestats:remote": "wrangler d1 execute debatable-db --remote --file=./migrations/0006-game-stats.sql",
+    "db:backfill-stats:remote": "wrangler d1 execute debatable-db --remote --command \"INSERT INTO game_stats (day, created, completed, new_creators) SELECT date(created_at/1000,'unixepoch') AS day, COUNT(*), SUM(p2_submitted_at IS NOT NULL), 0 FROM games WHERE date(created_at/1000,'unixepoch') < date('now') GROUP BY day ON CONFLICT(day) DO NOTHING\"",
     "stats:saves": "wrangler d1 execute debatable-db --remote --command \"SELECT day, count FROM card_saves ORDER BY day DESC LIMIT 60\"",
     "stats:games": "wrangler d1 execute debatable-db --remote --command \"SELECT date(created_at/1000,'unixepoch') AS day, COUNT(*) AS created, SUM(p2_submitted_at IS NOT NULL) AS completed FROM games GROUP BY day ORDER BY day DESC\"",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
