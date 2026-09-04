@@ -48,12 +48,16 @@ export function showLanding(opts: { onStart: () => void; onCode: (code: string) 
     opts.onCode(code);
   };
 
+  // Parked, not deleted: manual code entry sat unused — everyone arrives
+  // through the shared link. Re-add codeRow (and its "Have a code?"
+  // toggle) to the stack below to bring it back.
   const codeRow = h(
     "div",
     { class: "code-entry", hidden: true },
     input,
     h("button", { class: "btn", onclick: go }, "Go")
   );
+  void codeRow;
 
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter") go();
@@ -71,19 +75,7 @@ export function showLanding(opts: { onStart: () => void; onCode: (code: string) 
         h(
           "div",
           { class: "stack mt" },
-          h("button", { class: "btn btn-primary", onclick: opts.onStart }, "Start a game"),
-          h(
-            "button",
-            {
-              class: "btn-ghost btn",
-              onclick: () => {
-                codeRow.hidden = false;
-                input.focus();
-              },
-            },
-            "Have a code?"
-          ),
-          codeRow
+          h("button", { class: "btn btn-primary", onclick: opts.onStart }, "Start a game")
         )
       ),
       footerNote()
