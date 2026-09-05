@@ -574,13 +574,19 @@ export function playFlappy(opts: FlappyOptions): void {
   // ——— rendering ———
   const drawPipePair = (pipe: { x: number; gapY: number; gap: number; passedAt: number | null }) => {
     const capH = 26;
-    // Pass pop: for 0.3s after the bird clears a pipe, both halves do a
-    // springy bulge (sinusoidal swell, ~8px at peak) with a light-green
-    // flash — an arcade bonk as you blow past.
+    // Pass pop: cleared pipes swell to a peak, settle slightly bigger, and
+    // stay lit — permanently wider and lighter, a trail of conquests.
     const POP = 0.3;
-    const popT = pipe.passedAt === null ? Infinity : elapsed - pipe.passedAt;
-    const k = popT < POP ? Math.sin(Math.PI * (popT / POP)) : 0;
-    const bulge = k * 8;
+    const PEAK = 9;
+    const REST = 5;
+    const popT = pipe.passedAt === null ? -1 : elapsed - pipe.passedAt;
+    let bulge = 0;
+    if (popT >= 0) {
+      if (popT < POP / 2) bulge = PEAK * Math.sin(Math.PI * (popT / POP));
+      else if (popT < POP) bulge = REST + (PEAK - REST) * Math.cos((Math.PI * (popT - POP / 2)) / POP);
+      else bulge = REST;
+    }
+    const k = popT >= 0 && popT < POP ? Math.sin(Math.PI * (popT / POP)) : 0;
     const x = pipe.x - bulge / 2;
     const w = PIPE_WIDTH + bulge;
 
@@ -614,8 +620,9 @@ export function playFlappy(opts: FlappyOptions): void {
     cap(pipe.gapY + pipe.gap);
     body(pipe.gapY + pipe.gap + capH, FLOOR_Y - pipe.gapY - pipe.gap - capH);
 
-    if (k > 0) {
-      ctx.globalAlpha = k * 0.35;
+    if (popT >= 0) {
+      // Lights up on pass, pulses brighter through the pop, then holds.
+      ctx.globalAlpha = Math.max(0.22, k * 0.4);
       ctx.fillStyle = PIPE_LIGHT;
       ctx.fillRect(x, 0, w, pipe.gapY);
       ctx.fillRect(x, pipe.gapY + pipe.gap, w, FLOOR_Y - pipe.gapY - pipe.gap);
