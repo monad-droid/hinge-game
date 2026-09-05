@@ -65,9 +65,8 @@ const WING_MAP = [
 ];
 
 // The same bird, dressed for the club: black deal-with-it shades under
-// the white brow, a purple suit and wing, and a white chain running down
-// to a checkered disco-ball medallion that hangs below the body (the
-// disco sprite is 4 rows taller than the regular bird for the pendant).
+// the white brow and a full purple suit — jacket over the lower body,
+// matching wing, darker purple shading.
 const DISCO_BIRD_MAP = [
   ".......KKKKKK.......",
   ".....KKYYYYYYKK.....",
@@ -77,16 +76,12 @@ const DISCO_BIRD_MAP = [
   "..KYYYYYYYYKWWWWWK..",
   "..KYYYYYYYYYKWWWK...",
   "..KYYYYYYYYYKKKKKKK.",
-  "..KYYYYYYYYKOOOOOOK.",
-  "..KYYYYYYYYKDDDDDDK.",
-  "...KYYYYYYYYKKKKKK..",
-  "...KYYPPGPPYYKW...W.",
-  "....KPPPPPPPK..W.W..",
-  ".....KKKKKKK....W...",
-  "..............KKK...",
-  ".............KSKSK..",
-  ".............SKSKS..",
-  "..............KKK...",
+  "..KPPPPPPPPKOOOOOOK.",
+  "..KPPPPPPPPKDDDDDDK.",
+  "...KPPPPPPPPKKKKKK..",
+  "...KPPVPPGPPPK......",
+  "....KPVPPPVPK.......",
+  ".....KKKKKKK........",
 ];
 
 const DISCO_WING_MAP = [
@@ -656,6 +651,32 @@ export function playFlappy(opts: FlappyOptions): void {
     // bottom pipe (stands on the ground)
     cap(pipe.gapY + pipe.gap);
     body(pipe.gapY + pipe.gap + capH, FLOOR_Y - pipe.gapY - pipe.gap - capH);
+
+    // The portal: a translucent energy field filling the disco pipe's gap,
+    // connecting its two halves — you fly through it into disco mode.
+    if (pipe.index === DISCO_PIPE) {
+      const gy0 = pipe.gapY;
+      const gh = pipe.gap;
+      ctx.save();
+      const grad = ctx.createLinearGradient(x, 0, x + w, 0);
+      grad.addColorStop(0, "#a04de0");
+      grad.addColorStop(0.5, "#37d5f0");
+      grad.addColorStop(1, "#ff4fd8");
+      ctx.globalAlpha = 0.32;
+      ctx.fillStyle = grad;
+      ctx.fillRect(x + 2, gy0, w - 4, gh);
+      // soft shimmer lines drifting downward through the field
+      ctx.globalAlpha = 0.3;
+      ctx.fillStyle = "#f2e9ff";
+      const bandStep = 14;
+      const drift = reducedMotion ? 0 : (elapsed * 45) % bandStep;
+      for (let by = gy0 - bandStep + drift; by < gy0 + gh; by += bandStep) {
+        const top = Math.max(by, gy0);
+        const bot = Math.min(by + 2, gy0 + gh);
+        if (bot > top) ctx.fillRect(x + 4, top, w - 8, bot - top);
+      }
+      ctx.restore();
+    }
 
     // Mirror-ball glints wandering the disco pipe's faces.
     if (pipe.index === DISCO_PIPE) {
