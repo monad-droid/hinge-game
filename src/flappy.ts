@@ -768,8 +768,8 @@ export function playFlappy(opts: FlappyOptions): void {
       }
       ctx.restore();
 
-      // twin disco balls, flanking the score
-      for (const bfx of [0.18, 0.82]) {
+      // one disco ball, hung to the left of the score
+      for (const bfx of [0.18]) {
       const bx = W * bfx;
       const by = 70;
       const r = 22;
