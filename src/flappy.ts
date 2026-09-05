@@ -366,6 +366,31 @@ export function playFlappy(opts: FlappyOptions): void {
   let velocity = 0;
   let score = 0;
   let pipes: { x: number; gapY: number; gap: number; counted: boolean }[] = [];
+  // Rainbow sparkles out of the bird's rear: a steady dribble in flight,
+  // a proud burst per flap. Pixel squares, world-scrolled, fading out.
+  const SPARKLE_COLORS = ["#ff4d00", "#ffc233", "#74bf2e", "#2657e0", "#a04de0", "#ff7ab8", "#ffffff"];
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let sparkles: { x: number; y: number; vx: number; vy: number; life: number; max: number; size: number; color: string }[] = [];
+  let sparkleColorAt = 0;
+  const emitSparkle = (burst: boolean) => {
+    if (reducedMotion || sparkles.length > 140) return;
+    const tailX = BIRD_X - 4;
+    const tailY = birdY + BIRD_SIZE * 0.62; // the business end
+    const n = burst ? 6 : 1;
+    for (let i = 0; i < n; i++) {
+      const life = 0.45 + Math.random() * 0.4;
+      sparkles.push({
+        x: tailX + (Math.random() - 0.5) * 4,
+        y: tailY + (Math.random() - 0.5) * 6,
+        vx: -(30 + Math.random() * 60) * u,
+        vy: (burst ? 60 : 20) * u * (Math.random() - 0.35),
+        life,
+        max: life,
+        size: (burst ? 3 : 2) + Math.random() * 3,
+        color: SPARKLE_COLORS[sparkleColorAt++ % SPARKLE_COLORS.length]!,
+      });
+    }
+  };
   let nextPipeX = W + 140;
   let scrollX = 0;
   let raf = 0;
@@ -380,7 +405,10 @@ export function playFlappy(opts: FlappyOptions): void {
   const flap = () => {
     if (phase === "intro") return; // taps do nothing until Take flight
     if (phase === "ready" || phase === "paused") phase = "playing";
-    if (phase === "playing") velocity = FLAP;
+    if (phase === "playing") {
+      velocity = FLAP;
+      emitSparkle(true);
+    }
   };
 
   // An interruption mid-run (notification banner, incoming call, app
@@ -498,6 +526,14 @@ export function playFlappy(opts: FlappyOptions): void {
   // ——— simulation ———
   const step = (dt: number) => {
     const speed = speedNow();
+    emitSparkle(false);
+    for (const sp of sparkles) {
+      sp.x += (sp.vx - speed) * dt;
+      sp.y += sp.vy * dt;
+      sp.vy += 260 * u * dt; // gentle fall
+      sp.life -= dt;
+    }
+    sparkles = sparkles.filter((sp) => sp.life > 0 && sp.x > -12);
     velocity += GRAVITY * dt;
     birdY += velocity * dt;
     scrollX += speed * dt;
@@ -601,6 +637,15 @@ export function playFlappy(opts: FlappyOptions): void {
     for (let sx = -stripeSpan + (-scrollX % stripeSpan); sx < W; sx += stripeSpan) {
       ctx.fillRect(sx, FLOOR_Y + 10, 13, 9);
     }
+
+    // sparkle trail, behind the bird
+    for (const sp of sparkles) {
+      ctx.globalAlpha = Math.max(0, sp.life / sp.max);
+      ctx.fillStyle = sp.color;
+      const px = Math.round(sp.size);
+      ctx.fillRect(Math.round(sp.x), Math.round(sp.y), px, px);
+    }
+    ctx.globalAlpha = 1;
 
     // bird: sprite frame by time, tilted with velocity (level while bobbing)
     const frame = birdFrames[Math.floor(elapsed / 0.09) % 3]!;
