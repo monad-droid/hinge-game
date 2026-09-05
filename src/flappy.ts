@@ -652,29 +652,49 @@ export function playFlappy(opts: FlappyOptions): void {
     cap(pipe.gapY + pipe.gap);
     body(pipe.gapY + pipe.gap + capH, FLOOR_Y - pipe.gapY - pipe.gap - capH);
 
-    // The portal: a translucent energy field filling the disco pipe's gap,
-    // connecting its two halves — you fly through it into disco mode.
+    // The portal: a skinny, glowing green swirl filling the disco pipe's
+    // gap — layered outer glow, bright body, rotating darker swirl arcs,
+    // pale center. You fly through it into disco mode.
     if (pipe.index === DISCO_PIPE) {
-      const gy0 = pipe.gapY;
-      const gh = pipe.gap;
+      const pcx = x + w / 2;
+      const pcy = pipe.gapY + pipe.gap / 2;
+      const rx = w * 0.32;
+      const ry = pipe.gap / 2 - 3;
+      const wob = (ph: number) => (reducedMotion ? 0 : Math.sin(elapsed * 3.1 + ph) * 2.5);
       ctx.save();
-      const grad = ctx.createLinearGradient(x, 0, x + w, 0);
-      grad.addColorStop(0, "#a04de0");
-      grad.addColorStop(0.5, "#37d5f0");
-      grad.addColorStop(1, "#ff4fd8");
-      ctx.globalAlpha = 0.32;
-      ctx.fillStyle = grad;
-      ctx.fillRect(x + 2, gy0, w - 4, gh);
-      // soft shimmer lines drifting downward through the field
-      ctx.globalAlpha = 0.3;
-      ctx.fillStyle = "#f2e9ff";
-      const bandStep = 14;
-      const drift = reducedMotion ? 0 : (elapsed * 45) % bandStep;
-      for (let by = gy0 - bandStep + drift; by < gy0 + gh; by += bandStep) {
-        const top = Math.max(by, gy0);
-        const bot = Math.min(by + 2, gy0 + gh);
-        if (bot > top) ctx.fillRect(x + 4, top, w - 8, bot - top);
+      // outer glow, layered
+      const GLOW: [string, number][] = [
+        ["rgba(151, 206, 76, 0.16)", 14],
+        ["rgba(151, 206, 76, 0.3)", 8],
+        ["rgba(196, 244, 110, 0.45)", 4],
+      ];
+      for (let gi = 0; gi < GLOW.length; gi++) {
+        const [gc, grow] = GLOW[gi]!;
+        ctx.fillStyle = gc;
+        ctx.beginPath();
+        ctx.ellipse(pcx, pcy, rx + grow + wob(gi), ry + grow * 0.7 + wob(gi + 2), 0, 0, Math.PI * 2);
+        ctx.fill();
       }
+      // body
+      ctx.fillStyle = "#97ce4c";
+      ctx.beginPath();
+      ctx.ellipse(pcx, pcy, rx + wob(5), ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // rotating darker swirl arcs
+      ctx.strokeStyle = "#5b9b33";
+      ctx.lineWidth = 3;
+      ctx.lineCap = "round";
+      for (let si = 0; si < 3; si++) {
+        const a0 = (reducedMotion ? si : elapsed * 2.4 + si * 2.1);
+        ctx.beginPath();
+        ctx.ellipse(pcx, pcy, rx * (0.82 - si * 0.22), ry * (0.85 - si * 0.22), 0, a0, a0 + Math.PI * 1.25);
+        ctx.stroke();
+      }
+      // pale center
+      ctx.fillStyle = "#ecf7d5";
+      ctx.beginPath();
+      ctx.ellipse(pcx, pcy, rx * 0.34, ry * 0.36, 0, 0, Math.PI * 2);
+      ctx.fill();
       ctx.restore();
     }
 
