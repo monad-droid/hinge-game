@@ -664,24 +664,6 @@ export function playFlappy(opts: FlappyOptions): void {
       }
     }
 
-    // Disco glow: a pulsing neon outline on every pipe once the mode is on.
-    if (discoOn && pipe.index >= DISCO_PIPE) {
-      const topB = pipe.gapY;
-      const botT = pipe.gapY + pipe.gap;
-      const pulse = reducedMotion ? 0.42 : 0.4 + 0.22 * Math.sin(elapsed * 6 + pipe.index * 1.7);
-      ctx.save();
-      ctx.strokeStyle = cLight;
-      ctx.globalAlpha = pulse * 0.55;
-      ctx.lineWidth = 9;
-      ctx.strokeRect(x - 2, -8, w + 4, topB + 6);
-      ctx.strokeRect(x - 2, botT + 2, w + 4, FLOOR_Y - botT + 8);
-      ctx.globalAlpha = Math.min(1, pulse * 1.35);
-      ctx.lineWidth = 3;
-      ctx.strokeRect(x - 1, -6, w + 2, topB + 4);
-      ctx.strokeRect(x - 1, botT + 1, w + 2, FLOOR_Y - botT + 6);
-      ctx.restore();
-
-    }
 
     if (popT >= 0) {
       // Lights up on pass, pulses brighter through the pop, then holds.
