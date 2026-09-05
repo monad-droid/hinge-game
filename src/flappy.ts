@@ -664,8 +664,7 @@ export function playFlappy(opts: FlappyOptions): void {
       }
     }
 
-    // Disco electricity: a pulsing glow outline plus bright sparks that
-    // crawl the edges of every pipe once the mode is on.
+    // Disco glow: a pulsing neon outline on every pipe once the mode is on.
     if (discoOn && pipe.index >= DISCO_PIPE) {
       const topB = pipe.gapY;
       const botT = pipe.gapY + pipe.gap;
@@ -682,36 +681,6 @@ export function playFlappy(opts: FlappyOptions): void {
       ctx.strokeRect(x - 1, botT + 1, w + 2, FLOOR_Y - botT + 6);
       ctx.restore();
 
-      if (!reducedMotion) {
-        const drawSparks = (yTop: number, yBot: number, gapAtBottom: boolean) => {
-          const edgeH = Math.max(1, yBot - yTop);
-          for (let i = 0; i < 4; i++) {
-            const t = (((elapsed * 0.9 * (gapAtBottom ? 1 : -1) + i / 4 + pipe.index * 0.37) % 1) + 1) % 1;
-            let sx: number;
-            let sy: number;
-            if (t < 0.4) {
-              sx = x - 1;
-              sy = yTop + (t / 0.4) * edgeH;
-            } else if (t < 0.6) {
-              sx = x + ((t - 0.4) / 0.2) * w;
-              sy = gapAtBottom ? yBot : yTop;
-            } else {
-              sx = x + w - 1;
-              sy = yBot - ((t - 0.6) / 0.4) * edgeH;
-            }
-            ctx.globalAlpha = 0.35;
-            ctx.fillStyle = cLight;
-            ctx.fillRect(sx - 4, sy - 4, 9, 9);
-            ctx.globalAlpha = 0.7;
-            ctx.fillRect(sx - 2, sy - 2, 5, 5);
-            ctx.globalAlpha = 1;
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(sx - 1, sy - 1, 3, 3);
-          }
-        };
-        drawSparks(0, topB, true);
-        drawSparks(botT, FLOOR_Y, false);
-      }
     }
 
     if (popT >= 0) {
