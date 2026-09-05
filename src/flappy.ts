@@ -433,8 +433,16 @@ export function playFlappy(opts: FlappyOptions): void {
   // playback for the portal later.
   let music: HTMLAudioElement | null = null;
   let musicFade = 0;
+  let musicFadeEnd = 0;
   let musicStartTimer = 0;
   let musicPrimed = false;
+  // Web Audio gain path: iOS ignores volume (and muted) writes on audio
+  // elements, so a real fade there means routing the element through an
+  // AudioContext and ramping a GainNode — which iOS does respect. When
+  // the graph can't be built, the element-volume tick fade is the fallback.
+  let audioCtx: AudioContext | null = null;
+  let musicGain: GainNode | null = null;
+  const FADE_S = 1.6;
 
   const ensureMusic = () => {
     if (!music) {
@@ -448,12 +456,26 @@ export function playFlappy(opts: FlappyOptions): void {
   const primeMusic = () => {
     // One synchronous play()+pause() inside a real tap marks the element
     // user-activated so the portal can start it later. It must all stay
-    // synchronous: iOS ignores muted (and volume) on audio elements, so
-    // pausing from the play() promise leaks an audible blip — or, when
-    // that promise never settles, the whole track.
+    // synchronous: pausing from the play() promise leaks an audible blip —
+    // or, when that promise never settles, the whole track.
     if (musicPrimed) return;
     musicPrimed = true;
     const m = ensureMusic();
+    try {
+      // The context also needs a user gesture to leave "suspended" on
+      // mobile — build and resume it here, inside the tap.
+      if (!audioCtx && window.AudioContext) {
+        audioCtx = new AudioContext();
+        const src = audioCtx.createMediaElementSource(m);
+        musicGain = audioCtx.createGain();
+        src.connect(musicGain);
+        musicGain.connect(audioCtx.destination);
+      }
+      void audioCtx?.resume().catch(() => {});
+    } catch {
+      audioCtx = null;
+      musicGain = null; // graph failed — element volume fallback takes over
+    }
     m.play().catch(() => {}); // rejection (AbortError from the pause) is expected
     m.pause();
     m.currentTime = 0;
@@ -470,6 +492,11 @@ export function playFlappy(opts: FlappyOptions): void {
     musicStartTimer = window.setTimeout(() => {
       m.muted = false;
       m.volume = 1;
+      if (audioCtx && musicGain) {
+        void audioCtx.resume().catch(() => {});
+        musicGain.gain.cancelScheduledValues(audioCtx.currentTime);
+        musicGain.gain.setValueAtTime(1, audioCtx.currentTime);
+      }
       if (m.currentTime > 0.05) m.currentTime = 0; // skip a redundant seek
       void m.play().catch(() => {}); // music is a bonus, never an error
     }, 150);
@@ -478,21 +505,32 @@ export function playFlappy(opts: FlappyOptions): void {
   const stopMusic = (fade: boolean) => {
     const m = music;
     clearInterval(musicFade);
+    clearTimeout(musicFadeEnd);
     clearTimeout(musicStartTimer);
     if (!m || m.paused) return;
     if (!fade) {
       m.pause();
       return;
     }
-    // Tick-bounded fade: iOS ignores volume writes entirely (volume is
-    // hardware-buttons only there), so the stop must never depend on the
-    // volume actually reaching zero — after the last tick, pause no
-    // matter what. Everywhere else the fade is audible as intended.
-    let ticks = 15;
+    if (audioCtx && musicGain && audioCtx.state === "running") {
+      // The real fade: ramp the gain down, then pause once it's silent.
+      const t = audioCtx.currentTime;
+      const g = musicGain;
+      g.gain.cancelScheduledValues(t);
+      g.gain.setValueAtTime(g.gain.value, t);
+      g.gain.linearRampToValueAtTime(0.0001, t + FADE_S);
+      musicFadeEnd = window.setTimeout(() => m.pause(), FADE_S * 1000 + 100);
+      return;
+    }
+    // Element-volume fallback, tick-bounded: where volume writes are
+    // ignored (no graph, but an iOS-like element), the stop must never
+    // depend on the volume actually reaching zero — after the last tick,
+    // pause no matter what.
+    let ticks = 32;
     musicFade = window.setInterval(() => {
       ticks--;
       try {
-        m.volume = Math.max(0, m.volume - 0.07);
+        m.volume = Math.max(0, m.volume - 0.032);
       } catch {
         // some webviews throw on volume writes — the tick bound still stops
       }
@@ -505,14 +543,18 @@ export function playFlappy(opts: FlappyOptions): void {
           // ditto
         }
       }
-    }, 45);
+    }, 50);
   };
 
   const flap = () => {
     if (phase === "intro") return; // taps do nothing until Take flight
     primeMusic();
     if (phase === "ready" || phase === "paused") {
-      if (phase === "paused" && discoOn) void music?.play().catch(() => {});
+      if (phase === "paused" && discoOn) {
+        // an iOS interruption can leave the context suspended too
+        void audioCtx?.resume().catch(() => {});
+        void music?.play().catch(() => {});
+      }
       phase = "playing";
     }
     if (phase === "playing") velocity = FLAP;
@@ -1070,8 +1112,14 @@ export function playFlappy(opts: FlappyOptions): void {
   const cleanup = () => {
     cancelAnimationFrame(raf);
     clearInterval(musicFade);
+    clearTimeout(musicFadeEnd);
     clearTimeout(musicStartTimer);
     music?.pause();
+    // Free the context — iOS caps how many can exist, and each game
+    // screen builds its own.
+    void audioCtx?.close().catch(() => {});
+    audioCtx = null;
+    musicGain = null;
     stage.removeEventListener("pointerdown", onPointer);
     stage.removeEventListener("touchstart", onTouch);
     stage.removeEventListener("touchend", onTouch);
