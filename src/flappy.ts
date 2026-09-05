@@ -64,15 +64,16 @@ const WING_MAP = [
   ".KKKKK..",
 ];
 
-// The same bird, dressed for the club: black deal-with-it shades under
-// the white brow and a full purple suit — jacket over the lower body,
+// The same bird, dressed for the club: oversized deal-with-it shades
+// (temple arm across the head, lens overhanging the face) under the
+// white brow, and a full purple suit — jacket over the lower body,
 // matching wing, darker purple shading.
 const DISCO_BIRD_MAP = [
   ".......KKKKKK.......",
   ".....KKYYYYYYKK.....",
   "....KYYYYYYYKWWWK...",
-  "...KYYYYYYYKKKKKKK..",
-  "...KYYYYYYYKKKKKKK..",
+  "...KKKKKKKKKKKKKKK..",
+  "...KYYYYYYYKKKKKKKK.",
   "..KYYYYYYYYKWWWWWK..",
   "..KYYYYYYYYYKWWWK...",
   "..KYYYYYYYYYKKKKKKK.",
