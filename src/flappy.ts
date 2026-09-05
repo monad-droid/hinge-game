@@ -664,6 +664,56 @@ export function playFlappy(opts: FlappyOptions): void {
       }
     }
 
+    // Disco electricity: a pulsing glow outline plus bright sparks that
+    // crawl the edges of every pipe once the mode is on.
+    if (discoOn && pipe.index >= DISCO_PIPE) {
+      const topB = pipe.gapY;
+      const botT = pipe.gapY + pipe.gap;
+      const pulse = reducedMotion ? 0.42 : 0.4 + 0.22 * Math.sin(elapsed * 6 + pipe.index * 1.7);
+      ctx.save();
+      ctx.strokeStyle = cLight;
+      ctx.globalAlpha = pulse * 0.55;
+      ctx.lineWidth = 9;
+      ctx.strokeRect(x - 2, -8, w + 4, topB + 6);
+      ctx.strokeRect(x - 2, botT + 2, w + 4, FLOOR_Y - botT + 8);
+      ctx.globalAlpha = Math.min(1, pulse * 1.35);
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x - 1, -6, w + 2, topB + 4);
+      ctx.strokeRect(x - 1, botT + 1, w + 2, FLOOR_Y - botT + 6);
+      ctx.restore();
+
+      if (!reducedMotion) {
+        const drawSparks = (yTop: number, yBot: number, gapAtBottom: boolean) => {
+          const edgeH = Math.max(1, yBot - yTop);
+          for (let i = 0; i < 4; i++) {
+            const t = (((elapsed * 0.9 * (gapAtBottom ? 1 : -1) + i / 4 + pipe.index * 0.37) % 1) + 1) % 1;
+            let sx: number;
+            let sy: number;
+            if (t < 0.4) {
+              sx = x - 1;
+              sy = yTop + (t / 0.4) * edgeH;
+            } else if (t < 0.6) {
+              sx = x + ((t - 0.4) / 0.2) * w;
+              sy = gapAtBottom ? yBot : yTop;
+            } else {
+              sx = x + w - 1;
+              sy = yBot - ((t - 0.6) / 0.4) * edgeH;
+            }
+            ctx.globalAlpha = 0.35;
+            ctx.fillStyle = cLight;
+            ctx.fillRect(sx - 4, sy - 4, 9, 9);
+            ctx.globalAlpha = 0.7;
+            ctx.fillRect(sx - 2, sy - 2, 5, 5);
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(sx - 1, sy - 1, 3, 3);
+          }
+        };
+        drawSparks(0, topB, true);
+        drawSparks(botT, FLOOR_Y, false);
+      }
+    }
+
     if (popT >= 0) {
       // Lights up on pass, pulses brighter through the pop, then holds.
       ctx.globalAlpha = Math.max(0.38, k * 0.55);
