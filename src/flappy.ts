@@ -945,8 +945,8 @@ export function playFlappy(opts: FlappyOptions): void {
       // one disco ball, hung to the left of the score
       for (const bfx of [0.18]) {
       const bx = W * bfx;
-      const by = 70;
-      const r = 22;
+      const by = 78;
+      const r = 34;
       ctx.strokeStyle = "#8b93a6";
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -963,14 +963,14 @@ export function playFlappy(opts: FlappyOptions): void {
       ctx.clip();
       ctx.strokeStyle = "rgba(139, 147, 166, 0.7)";
       ctx.lineWidth = 1;
-      for (let gy = -r; gy <= r; gy += 8) {
+      for (let gy = -r; gy <= r; gy += 10) {
         ctx.beginPath();
         ctx.moveTo(bx - r, by + gy);
         ctx.lineTo(bx + r, by + gy);
         ctx.stroke();
       }
-      const spin = reducedMotion ? 0 : (elapsed * 30) % 16;
-      for (let gx = -r - 16; gx <= r; gx += 8) {
+      const spin = reducedMotion ? 0 : (elapsed * 30) % 20;
+      for (let gx = -r - 20; gx <= r; gx += 10) {
         ctx.beginPath();
         ctx.moveTo(bx + gx + spin, by - r);
         ctx.lineTo(bx + gx + spin, by + r);
@@ -978,8 +978,8 @@ export function playFlappy(opts: FlappyOptions): void {
       }
       ctx.fillStyle = "#ffffff";
       const gl = Math.floor(elapsed * 5) % 4;
-      ctx.fillRect(bx - r + 6 + gl * 9, by - 8 + (gl % 2) * 10, 4, 4);
-      ctx.fillRect(bx + r - 10 - gl * 5, by + 2 - (gl % 2) * 12, 3, 3);
+      ctx.fillRect(bx - r + 8 + gl * 13, by - 12 + (gl % 2) * 14, 5, 5);
+      ctx.fillRect(bx + r - 14 - gl * 7, by + 4 - (gl % 2) * 16, 4, 4);
       ctx.restore();
       ctx.strokeStyle = OUTLINE;
       ctx.lineWidth = 2;
