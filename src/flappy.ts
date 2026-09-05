@@ -662,47 +662,78 @@ export function playFlappy(opts: FlappyOptions): void {
     // The portal: a skinny, glowing purple swirl filling the portal
     // pipe's gap — layered outer glow, bright body, rotating darker swirl
     // arcs, pale center. Pipe 5 leads into disco mode, pipe 15 leads out.
+    // Once the bird is through, the portal collapses behind it: the swirl
+    // spins up, pinches to a point, and winks out with a spark.
     if (isPortalPipe) {
       const pcx = x + w / 2;
       const pcy = pipe.gapY + pipe.gap / 2;
-      const rx = w * 0.32;
-      const ry = pipe.gap / 2 - 3;
-      const wob = (ph: number) => (reducedMotion ? 0 : Math.sin(elapsed * 3.1 + ph) * 2.5);
-      ctx.save();
-      // outer glow, layered
-      const GLOW: [string, number][] = [
-        ["rgba(160, 77, 224, 0.16)", 14],
-        ["rgba(160, 77, 224, 0.3)", 8],
-        ["rgba(206, 140, 255, 0.45)", 4],
-      ];
-      for (let gi = 0; gi < GLOW.length; gi++) {
-        const [gc, grow] = GLOW[gi]!;
-        ctx.fillStyle = gc;
+      const COLLAPSE = 0.55;
+      const ct = pipe.passedAt === null ? -1 : elapsed - pipe.passedAt;
+      const cp = ct < 0 ? 0 : Math.min(1, ct / COLLAPSE); // 0 open → 1 shut
+      const scale = reducedMotion && ct >= 0 ? 0 : 1 - cp * cp; // slow start, fast pinch
+      if (scale > 0.02) {
+        const rx = w * 0.32 * scale;
+        const ry = (pipe.gap / 2 - 3) * scale;
+        const spin = elapsed * 2.4 + cp * cp * 22; // frantic as it shuts
+        const wob = (ph: number) => (reducedMotion ? 0 : Math.sin(elapsed * 3.1 + ph) * 2.5 * scale);
+        ctx.save();
+        // outer glow, layered (tightens with the collapse)
+        const GLOW: [string, number][] = [
+          ["rgba(160, 77, 224, 0.16)", 14],
+          ["rgba(160, 77, 224, 0.3)", 8],
+          ["rgba(206, 140, 255, 0.45)", 4],
+        ];
+        for (let gi = 0; gi < GLOW.length; gi++) {
+          const [gc, grow] = GLOW[gi]!;
+          const g = grow * scale;
+          ctx.fillStyle = gc;
+          ctx.beginPath();
+          ctx.ellipse(pcx, pcy, rx + g + wob(gi), ry + g * 0.7 + wob(gi + 2), 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        // body
+        ctx.fillStyle = "#a04de0";
         ctx.beginPath();
-        ctx.ellipse(pcx, pcy, rx + grow + wob(gi), ry + grow * 0.7 + wob(gi + 2), 0, 0, Math.PI * 2);
+        ctx.ellipse(pcx, pcy, rx + wob(5), ry, 0, 0, Math.PI * 2);
         ctx.fill();
-      }
-      // body
-      ctx.fillStyle = "#a04de0";
-      ctx.beginPath();
-      ctx.ellipse(pcx, pcy, rx + wob(5), ry, 0, 0, Math.PI * 2);
-      ctx.fill();
-      // rotating darker swirl arcs
-      ctx.strokeStyle = "#6b2aa8";
-      ctx.lineWidth = 3;
-      ctx.lineCap = "round";
-      for (let si = 0; si < 3; si++) {
-        const a0 = (reducedMotion ? si : elapsed * 2.4 + si * 2.1);
+        // rotating darker swirl arcs
+        ctx.strokeStyle = "#6b2aa8";
+        ctx.lineWidth = 3;
+        ctx.lineCap = "round";
+        for (let si = 0; si < 3; si++) {
+          const a0 = (reducedMotion ? si : spin + si * 2.1);
+          ctx.beginPath();
+          ctx.ellipse(pcx, pcy, rx * (0.82 - si * 0.22), ry * (0.85 - si * 0.22), 0, a0, a0 + Math.PI * 1.25);
+          ctx.stroke();
+        }
+        // pale center
+        ctx.fillStyle = "#f2e4ff";
         ctx.beginPath();
-        ctx.ellipse(pcx, pcy, rx * (0.82 - si * 0.22), ry * (0.85 - si * 0.22), 0, a0, a0 + Math.PI * 1.25);
-        ctx.stroke();
+        ctx.ellipse(pcx, pcy, rx * 0.34, ry * 0.36, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
       }
-      // pale center
-      ctx.fillStyle = "#f2e4ff";
-      ctx.beginPath();
-      ctx.ellipse(pcx, pcy, rx * 0.34, ry * 0.36, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
+      // the wink-out spark, right as the pinch finishes
+      if (ct >= 0 && !reducedMotion) {
+        const st = ct - COLLAPSE * 0.8;
+        const SPARK = 0.25;
+        if (st >= 0 && st < SPARK) {
+          const fade = 1 - st / SPARK;
+          const len = 5 + (1 - fade) * 13;
+          ctx.save();
+          ctx.globalAlpha = fade;
+          ctx.strokeStyle = "#f2e4ff";
+          ctx.lineWidth = 2;
+          ctx.lineCap = "round";
+          ctx.beginPath();
+          ctx.moveTo(pcx - len, pcy);
+          ctx.lineTo(pcx + len, pcy);
+          ctx.moveTo(pcx, pcy - len * 0.6);
+          ctx.lineTo(pcx, pcy + len * 0.6);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
     }
 
     // Mirror-ball glints wandering the portal pipes' faces.
