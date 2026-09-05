@@ -30,6 +30,12 @@ const BIRD_COLORS: Record<string, string> = {
   W: "#ffffff",
   O: "#f2842b",
   D: "#d9650f",
+  // disco outfit: mirrored shades, sequins, silver wing
+  A: "#37d5f0",
+  M: "#ff4fd8",
+  P: "#a04de0",
+  G: "#ffd23f",
+  S: "#e6e9f2",
 };
 
 const BIRD_MAP = [
@@ -57,6 +63,33 @@ const WING_MAP = [
   ".KKKKK..",
 ];
 
+// The same bird, dressed for the club: mirrored shades with a glint,
+// a pink/purple/gold sequined vest, and a silver sequin wing.
+const DISCO_BIRD_MAP = [
+  ".......KKKKKK.......",
+  ".....KKYYYYYYKK.....",
+  "....KYYYYYYYKAAAK...",
+  "...KYYYYYYYKAAAAAK..",
+  "...KYYYYYYYKAWAAAK..",
+  "..KYYYYYYYYKAAAAAK..",
+  "..KYYYYYYYYYKAAAK...",
+  "..KYYYYYYYYYKKKKKKK.",
+  "..KYYYYYYYYKOOOOOOK.",
+  "..KYYYYYYYYKDDDDDDK.",
+  "...KYYYYYYYYKKKKKK..",
+  "...KYYMPGPMYYK......",
+  "....KPMGPMGPK.......",
+  ".....KKKKKKK........",
+];
+
+const DISCO_WING_MAP = [
+  ".KKKKK..",
+  "KSSSSSK.",
+  "KSGSSMSK",
+  "KSSSSSK.",
+  ".KKKKK..",
+];
+
 function paintMap(ctx: CanvasRenderingContext2D, map: string[], ox: number, oy: number): void {
   for (let y = 0; y < map.length; y++) {
     const row = map[y]!;
@@ -71,14 +104,14 @@ function paintMap(ctx: CanvasRenderingContext2D, map: string[], ox: number, oy: 
 }
 
 // Pre-renders the three wing frames at 1× — scaled up crisply at draw time.
-function makeBirdFrames(): HTMLCanvasElement[] {
+function makeBirdFrames(bodyMap: string[], wingMap: string[]): HTMLCanvasElement[] {
   return [-2, 0, 2].map((wingOffset) => {
     const c = document.createElement("canvas");
     c.width = 20;
     c.height = 14;
     const ctx = c.getContext("2d")!;
-    paintMap(ctx, BIRD_MAP, 0, 0);
-    paintMap(ctx, WING_MAP, 1, 5 + wingOffset);
+    paintMap(ctx, bodyMap, 0, 0);
+    paintMap(ctx, wingMap, 1, 5 + wingOffset);
     return c;
   });
 }
@@ -348,7 +381,8 @@ export function playFlappy(opts: FlappyOptions): void {
   const SPRITE_W = 40;
   const SPRITE_H = 28;
 
-  const birdFrames = makeBirdFrames();
+  const birdFrames = makeBirdFrames(BIRD_MAP, WING_MAP);
+  const discoFrames = makeBirdFrames(DISCO_BIRD_MAP, DISCO_WING_MAP);
   const clouds = [0.15, 0.45, 0.75].map((f, i) => ({
     x: W * f,
     y: H * (0.12 + 0.11 * i),
@@ -685,10 +719,11 @@ export function playFlappy(opts: FlappyOptions): void {
       }
       ctx.restore();
 
-      // the disco ball
-      const bx = W / 2;
+      // twin disco balls, flanking the score
+      for (const bfx of [0.18, 0.82]) {
+      const bx = W * bfx;
       const by = 70;
-      const r = 24;
+      const r = 22;
       ctx.strokeStyle = "#8b93a6";
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -728,6 +763,7 @@ export function playFlappy(opts: FlappyOptions): void {
       ctx.beginPath();
       ctx.arc(bx, by, r, 0, Math.PI * 2);
       ctx.stroke();
+      }
     }
 
     for (const pipe of pipes) drawPipePair(pipe);
@@ -760,7 +796,7 @@ export function playFlappy(opts: FlappyOptions): void {
     }
 
     // bird: sprite frame by time, tilted with velocity (level while bobbing)
-    const frame = birdFrames[Math.floor(elapsed / 0.09) % 3]!;
+    const frame = (discoOn ? discoFrames : birdFrames)[Math.floor(elapsed / 0.09) % 3]!;
     ctx.save();
     ctx.translate(BIRD_X + BIRD_SIZE / 2, birdY + BIRD_SIZE / 2);
     if (phase === "playing" || phase === "dead") {
