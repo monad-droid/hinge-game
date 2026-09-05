@@ -652,7 +652,7 @@ export function playFlappy(opts: FlappyOptions): void {
     cap(pipe.gapY + pipe.gap);
     body(pipe.gapY + pipe.gap + capH, FLOOR_Y - pipe.gapY - pipe.gap - capH);
 
-    // The portal: a skinny, glowing green swirl filling the disco pipe's
+    // The portal: a skinny, glowing purple swirl filling the disco pipe's
     // gap — layered outer glow, bright body, rotating darker swirl arcs,
     // pale center. You fly through it into disco mode.
     if (pipe.index === DISCO_PIPE) {
@@ -664,9 +664,9 @@ export function playFlappy(opts: FlappyOptions): void {
       ctx.save();
       // outer glow, layered
       const GLOW: [string, number][] = [
-        ["rgba(151, 206, 76, 0.16)", 14],
-        ["rgba(151, 206, 76, 0.3)", 8],
-        ["rgba(196, 244, 110, 0.45)", 4],
+        ["rgba(160, 77, 224, 0.16)", 14],
+        ["rgba(160, 77, 224, 0.3)", 8],
+        ["rgba(206, 140, 255, 0.45)", 4],
       ];
       for (let gi = 0; gi < GLOW.length; gi++) {
         const [gc, grow] = GLOW[gi]!;
@@ -676,12 +676,12 @@ export function playFlappy(opts: FlappyOptions): void {
         ctx.fill();
       }
       // body
-      ctx.fillStyle = "#97ce4c";
+      ctx.fillStyle = "#a04de0";
       ctx.beginPath();
       ctx.ellipse(pcx, pcy, rx + wob(5), ry, 0, 0, Math.PI * 2);
       ctx.fill();
       // rotating darker swirl arcs
-      ctx.strokeStyle = "#5b9b33";
+      ctx.strokeStyle = "#6b2aa8";
       ctx.lineWidth = 3;
       ctx.lineCap = "round";
       for (let si = 0; si < 3; si++) {
@@ -691,7 +691,7 @@ export function playFlappy(opts: FlappyOptions): void {
         ctx.stroke();
       }
       // pale center
-      ctx.fillStyle = "#ecf7d5";
+      ctx.fillStyle = "#f2e4ff";
       ctx.beginPath();
       ctx.ellipse(pcx, pcy, rx * 0.34, ry * 0.36, 0, 0, Math.PI * 2);
       ctx.fill();
