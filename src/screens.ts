@@ -26,7 +26,12 @@ async function copyLink(code: string): Promise<void> {
 
 // ————— landing —————
 
-export function showLanding(opts: { onStart: () => void; onCode: (code: string) => void }): void {
+export function showLanding(opts: {
+  onStart: () => void;
+  onCode: (code: string) => void;
+  // Easter egg: five taps on the attribution line open free-play flappy.
+  onSecretFlappy?: () => void;
+}): void {
   const input = h("input", {
     type: "text",
     inputmode: "text",
@@ -78,9 +83,29 @@ export function showLanding(opts: { onStart: () => void; onCode: (code: string) 
           h("button", { class: "btn btn-primary", onclick: opts.onStart }, "Start a game")
         )
       ),
-      footerNote()
+      secretFooter(opts.onSecretFlappy)
     )
   );
+}
+
+// The attribution line, with a hidden handshake: five quick taps launch
+// the flappy game as a free-play easter egg. Taps more than 1.5s apart
+// reset the count, so nobody trips it by accident.
+function secretFooter(onSecret?: () => void): HTMLElement {
+  const el = footerNote();
+  if (!onSecret) return el;
+  let taps = 0;
+  let lastTap = 0;
+  el.addEventListener("click", () => {
+    const now = Date.now();
+    taps = now - lastTap < 1500 ? taps + 1 : 1;
+    lastTap = now;
+    if (taps >= 5) {
+      taps = 0;
+      onSecret();
+    }
+  });
+  return el;
 }
 
 // ————— Player 1: share & waiting —————

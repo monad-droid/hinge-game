@@ -365,7 +365,7 @@ export function playFlappy(opts: FlappyOptions): void {
   let birdY = restY;
   let velocity = 0;
   let score = 0;
-  let pipes: { x: number; gapY: number; gap: number; counted: boolean }[] = [];
+  let pipes: { x: number; gapY: number; gap: number; counted: boolean; passedAt: number | null }[] = [];
   // Rainbow sparkles out of the bird's rear: a steady dribble in flight,
   // a proud burst per flap. Pixel squares, world-scrolled, fading out.
   const SPARKLE_COLORS = ["#ff4d00", "#ffc233", "#74bf2e", "#2657e0", "#a04de0", "#ff7ab8", "#ffffff"];
@@ -553,7 +553,7 @@ export function playFlappy(opts: FlappyOptions): void {
     nextPipeX -= speed * dt;
     if (nextPipeX <= W) {
       const gap = gapNow();
-      pipes.push({ x: nextPipeX, gapY: spawnGapY(gap), gap, counted: false });
+      pipes.push({ x: nextPipeX, gapY: spawnGapY(gap), gap, counted: false, passedAt: null });
       nextPipeX += PIPE_SPACING;
     }
 
@@ -565,37 +565,46 @@ export function playFlappy(opts: FlappyOptions): void {
       }
       if (!pipe.counted && pipe.x + PIPE_WIDTH < BIRD_X) {
         pipe.counted = true;
+        pipe.passedAt = elapsed; // kicks off the pass pop
         score++;
       }
     }
   };
 
   // ——— rendering ———
-  const drawPipePair = (pipe: { x: number; gapY: number; gap: number }) => {
+  const drawPipePair = (pipe: { x: number; gapY: number; gap: number; passedAt: number | null }) => {
     const capH = 26;
-    const x = pipe.x;
+    // Pass pop: for 0.3s after the bird clears a pipe, both halves do a
+    // springy bulge (sinusoidal swell, ~8px at peak) with a light-green
+    // flash — an arcade bonk as you blow past.
+    const POP = 0.3;
+    const popT = pipe.passedAt === null ? Infinity : elapsed - pipe.passedAt;
+    const k = popT < POP ? Math.sin(Math.PI * (popT / POP)) : 0;
+    const bulge = k * 8;
+    const x = pipe.x - bulge / 2;
+    const w = PIPE_WIDTH + bulge;
 
     const body = (top: number, height: number) => {
       if (height <= 0) return;
       ctx.fillStyle = OUTLINE;
-      ctx.fillRect(x + 3, top, PIPE_WIDTH - 6, height);
+      ctx.fillRect(x + 3, top, w - 6, height);
       ctx.fillStyle = PIPE;
-      ctx.fillRect(x + 5, top, PIPE_WIDTH - 10, height);
+      ctx.fillRect(x + 5, top, w - 10, height);
       ctx.fillStyle = PIPE_LIGHT;
       ctx.fillRect(x + 8, top, 7, height);
       ctx.fillStyle = PIPE_DARK;
-      ctx.fillRect(x + PIPE_WIDTH - 12, top, 5, height);
+      ctx.fillRect(x + w - 12, top, 5, height);
     };
 
     const cap = (top: number) => {
       ctx.fillStyle = OUTLINE;
-      ctx.fillRect(x, top, PIPE_WIDTH, capH);
+      ctx.fillRect(x, top, w, capH);
       ctx.fillStyle = PIPE;
-      ctx.fillRect(x + 2, top + 2, PIPE_WIDTH - 4, capH - 4);
+      ctx.fillRect(x + 2, top + 2, w - 4, capH - 4);
       ctx.fillStyle = PIPE_LIGHT;
       ctx.fillRect(x + 5, top + 2, 8, capH - 4);
       ctx.fillStyle = PIPE_DARK;
-      ctx.fillRect(x + PIPE_WIDTH - 10, top + 2, 5, capH - 4);
+      ctx.fillRect(x + w - 10, top + 2, 5, capH - 4);
     };
 
     // top pipe (hangs from the ceiling)
@@ -604,6 +613,14 @@ export function playFlappy(opts: FlappyOptions): void {
     // bottom pipe (stands on the ground)
     cap(pipe.gapY + pipe.gap);
     body(pipe.gapY + pipe.gap + capH, FLOOR_Y - pipe.gapY - pipe.gap - capH);
+
+    if (k > 0) {
+      ctx.globalAlpha = k * 0.35;
+      ctx.fillStyle = PIPE_LIGHT;
+      ctx.fillRect(x, 0, w, pipe.gapY);
+      ctx.fillRect(x, pipe.gapY + pipe.gap, w, FLOOR_Y - pipe.gapY - pipe.gap);
+      ctx.globalAlpha = 1;
+    }
   };
 
   const draw = () => {

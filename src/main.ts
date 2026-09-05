@@ -4,6 +4,7 @@ import { getPack } from "../shared/packs";
 import { getChallenge, otherComponentId } from "../shared/drawing";
 import type { Answer, DrawingSubmission } from "../shared/types";
 import { ApiFail, api } from "./api";
+import { playFlappy } from "./flappy";
 import { startQuiz } from "./quiz";
 import { startReveal } from "./reveal";
 import {
@@ -32,6 +33,9 @@ function route(): void {
     showLanding({
       onStart: startPlayer1,
       onCode: (code) => navigate(`/g/${code}`),
+      // Five taps on the footer: flappy for its own sake. No game, no
+      // score stored — the tiebreaker screens return home when done.
+      onSecretFlappy: () => playFlappy({ onDone: () => route() }),
     });
   } else if (gameMatch) {
     void enterGame(gameMatch[1]!.toUpperCase());
