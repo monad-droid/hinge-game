@@ -15,7 +15,7 @@ import {
   showP2Intro,
   showShare,
 } from "./screens";
-import { getDraft, getRole, hasCreatedBefore, markCreated, setRole } from "./storage";
+import { getDraft, getRole, hasCreatedBefore, markCreated, reconcileCreatorFlag, setRole } from "./storage";
 import type { Role } from "./storage";
 
 function navigate(path: string): void {
@@ -204,5 +204,6 @@ function handleTerminal(e: unknown, code: string): void {
 // on touch, so every button gets press feedback, not just the answers.
 document.addEventListener("touchstart", () => {}, { passive: true });
 
+reconcileCreatorFlag();
 window.addEventListener("popstate", route);
 route();

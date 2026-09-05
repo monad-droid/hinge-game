@@ -90,3 +90,22 @@ export function hasCreatedBefore(): boolean {
 export function markCreated(): void {
   write("creator", true);
 }
+
+// Cold-start reconciliation: browsers that created games before the
+// creator flag existed still hold per-code role memories. A stored "p1"
+// role proves a past creation, so mark those browsers as returning —
+// otherwise every pre-existing creator counts as "new" once.
+export function reconcileCreatorFlag(): void {
+  if (hasCreatedBefore()) return;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(PREFIX + "role.") && localStorage.getItem(k) === '"p1"') {
+        markCreated();
+        return;
+      }
+    }
+  } catch {
+    // storage unavailable — nothing to reconcile
+  }
+}
