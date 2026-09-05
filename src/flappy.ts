@@ -433,6 +433,7 @@ export function playFlappy(opts: FlappyOptions): void {
   // playback for the portal later.
   let music: HTMLAudioElement | null = null;
   let musicFade = 0;
+  let musicStartTimer = 0;
   let musicPrimed = false;
 
   const ensureMusic = () => {
@@ -461,15 +462,23 @@ export function playFlappy(opts: FlappyOptions): void {
   const startMusic = () => {
     const m = ensureMusic();
     clearInterval(musicFade);
-    m.muted = false;
-    m.volume = 1;
-    m.currentTime = 0;
-    void m.play().catch(() => {}); // music is a bonus, never an error
+    clearTimeout(musicStartTimer);
+    // Deferred a beat: starting playback costs a main-thread hitch (audio
+    // session/decoder spin-up — noticeable on iOS), and the pass frame is
+    // already the most expensive one of the run, first club render plus
+    // mode flash. Landing the spin-up mid-flash hides the stutter.
+    musicStartTimer = window.setTimeout(() => {
+      m.muted = false;
+      m.volume = 1;
+      if (m.currentTime > 0.05) m.currentTime = 0; // skip a redundant seek
+      void m.play().catch(() => {}); // music is a bonus, never an error
+    }, 150);
   };
 
   const stopMusic = (fade: boolean) => {
     const m = music;
     clearInterval(musicFade);
+    clearTimeout(musicStartTimer);
     if (!m || m.paused) return;
     if (!fade) {
       m.pause();
@@ -1061,6 +1070,7 @@ export function playFlappy(opts: FlappyOptions): void {
   const cleanup = () => {
     cancelAnimationFrame(raf);
     clearInterval(musicFade);
+    clearTimeout(musicStartTimer);
     music?.pause();
     stage.removeEventListener("pointerdown", onPointer);
     stage.removeEventListener("touchstart", onTouch);
