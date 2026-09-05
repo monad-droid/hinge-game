@@ -479,12 +479,26 @@ export function playFlappy(opts: FlappyOptions): void {
       m.pause();
       return;
     }
+    // Tick-bounded fade: iOS ignores volume writes entirely (volume is
+    // hardware-buttons only there), so the stop must never depend on the
+    // volume actually reaching zero — after the last tick, pause no
+    // matter what. Everywhere else the fade is audible as intended.
+    let ticks = 15;
     musicFade = window.setInterval(() => {
-      m.volume = Math.max(0, m.volume - 0.07);
-      if (m.volume <= 0) {
+      ticks--;
+      try {
+        m.volume = Math.max(0, m.volume - 0.07);
+      } catch {
+        // some webviews throw on volume writes — the tick bound still stops
+      }
+      if (ticks <= 0 || m.volume <= 0) {
         clearInterval(musicFade);
         m.pause();
-        m.volume = 1;
+        try {
+          m.volume = 1;
+        } catch {
+          // ditto
+        }
       }
     }, 45);
   };
