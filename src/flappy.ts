@@ -445,21 +445,17 @@ export function playFlappy(opts: FlappyOptions): void {
   };
 
   const primeMusic = () => {
+    // One synchronous play()+pause() inside a real tap marks the element
+    // user-activated so the portal can start it later. It must all stay
+    // synchronous: iOS ignores muted (and volume) on audio elements, so
+    // pausing from the play() promise leaks an audible blip — or, when
+    // that promise never settles, the whole track.
     if (musicPrimed) return;
     musicPrimed = true;
     const m = ensureMusic();
-    m.muted = true;
-    m.play()
-      .then(() => {
-        m.pause();
-        m.currentTime = 0;
-        m.muted = false;
-      })
-      .catch(() => {
-        // blocked — try again on the next gesture
-        m.muted = false;
-        musicPrimed = false;
-      });
+    m.play().catch(() => {}); // rejection (AbortError from the pause) is expected
+    m.pause();
+    m.currentTime = 0;
   };
 
   const startMusic = () => {
