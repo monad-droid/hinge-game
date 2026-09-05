@@ -34,6 +34,7 @@ const BIRD_COLORS: Record<string, string> = {
   A: "#37d5f0",
   M: "#ff4fd8",
   P: "#a04de0",
+  V: "#7a2bb5",
   G: "#ffd23f",
   S: "#e6e9f2",
 };
@@ -63,30 +64,36 @@ const WING_MAP = [
   ".KKKKK..",
 ];
 
-// The same bird, dressed for the club: mirrored shades with a glint,
-// a pink/purple/gold sequined vest, and a silver sequin wing.
+// The same bird, dressed for the club: black deal-with-it shades under
+// the white brow, a purple suit and wing, and a white chain running down
+// to a checkered disco-ball medallion that hangs below the body (the
+// disco sprite is 4 rows taller than the regular bird for the pendant).
 const DISCO_BIRD_MAP = [
   ".......KKKKKK.......",
   ".....KKYYYYYYKK.....",
-  "....KYYYYYYYKAAAK...",
-  "...KYYYYYYYKAAAAAK..",
-  "...KYYYYYYYKAWAAAK..",
-  "..KYYYYYYYYKAAAAAK..",
-  "..KYYYYYYYYYKAAAK...",
+  "....KYYYYYYYKWWWK...",
+  "...KYYYYYYYKKKKKKK..",
+  "...KYYYYYYYKKKKKKK..",
+  "..KYYYYYYYYKWWWWWK..",
+  "..KYYYYYYYYYKWWWK...",
   "..KYYYYYYYYYKKKKKKK.",
   "..KYYYYYYYYKOOOOOOK.",
   "..KYYYYYYYYKDDDDDDK.",
   "...KYYYYYYYYKKKKKK..",
-  "...KYYMPGPMYYK......",
-  "....KPMGPMGPK.......",
-  ".....KKKKKKK........",
+  "...KYYPPGPPYYKW...W.",
+  "....KPPPPPPPK..W.W..",
+  ".....KKKKKKK....W...",
+  "..............KKK...",
+  ".............KSKSK..",
+  ".............SKSKS..",
+  "..............KKK...",
 ];
 
 const DISCO_WING_MAP = [
   ".KKKKK..",
-  "KSSSSSK.",
-  "KSGSSMSK",
-  "KSSSSSK.",
+  "KPPPPPK.",
+  "KPVPPVPK",
+  "KPPPPPK.",
   ".KKKKK..",
 ];
 
@@ -108,7 +115,7 @@ function makeBirdFrames(bodyMap: string[], wingMap: string[]): HTMLCanvasElement
   return [-2, 0, 2].map((wingOffset) => {
     const c = document.createElement("canvas");
     c.width = 20;
-    c.height = 14;
+    c.height = bodyMap.length;
     const ctx = c.getContext("2d")!;
     paintMap(ctx, bodyMap, 0, 0);
     paintMap(ctx, wingMap, 1, 5 + wingOffset);
@@ -803,7 +810,7 @@ export function playFlappy(opts: FlappyOptions): void {
     if (phase === "playing" || phase === "dead") {
       ctx.rotate(Math.max(-0.4, Math.min(0.9, velocity / (900 * u))));
     }
-    ctx.drawImage(frame, -SPRITE_W / 2, -SPRITE_H / 2, SPRITE_W, SPRITE_H);
+    ctx.drawImage(frame, -SPRITE_W / 2, -SPRITE_H / 2, SPRITE_W, (SPRITE_H * frame.height) / 14);
     ctx.restore();
 
     // get-ready / paused hint
