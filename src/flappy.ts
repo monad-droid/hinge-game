@@ -404,13 +404,16 @@ export function playFlappy(opts: FlappyOptions): void {
   let pipes: { x: number; gapY: number; gap: number; counted: boolean; passedAt: number | null; index: number }[] = [];
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   // ——— DISCO MODE ———
-  // The 5th pipe is the disco pipe (mirrored, glinting). Passing it drops
-  // the whole world into the club: dark sky, sweeping lights, a disco
-  // ball, neon pipes, and a flashing dance floor.
+  // The 5th pipe is the disco pipe (mirrored, glinting, portal in the
+  // gap). Passing it drops the whole world into the club: dark sky,
+  // sweeping lights, a disco ball, neon pipes, a flashing dance floor.
+  // Pipe 15 carries the exit portal — through it, the world goes back to
+  // normal and stays that way for the rest of the run.
   const DISCO_PIPE = 5;
+  const EXIT_PIPE = 15;
   let pipeIndex = 0;
   let discoOn = false;
-  let discoAt = -1;
+  let modeFlashAt = -1;
   let nextPipeX = W + 140;
   let scrollX = 0;
   let raf = 0;
@@ -450,7 +453,7 @@ export function playFlappy(opts: FlappyOptions): void {
     pipes = [];
     pipeIndex = 0;
     discoOn = false;
-    discoAt = -1;
+    modeFlashAt = -1;
     nextPipeX = W + 140;
     scrollX = 0;
     lastTime = 0;
@@ -581,7 +584,10 @@ export function playFlappy(opts: FlappyOptions): void {
         score++;
         if (pipe.index === DISCO_PIPE && !discoOn) {
           discoOn = true;
-          discoAt = elapsed;
+          modeFlashAt = elapsed;
+        } else if (pipe.index === EXIT_PIPE && discoOn) {
+          discoOn = false;
+          modeFlashAt = elapsed;
         }
       }
     }
@@ -611,7 +617,8 @@ export function playFlappy(opts: FlappyOptions): void {
     let cMain: string = PIPE;
     let cLight: string = PIPE_LIGHT;
     let cDark: string = PIPE_DARK;
-    if (pipe.index === DISCO_PIPE) {
+    const isPortalPipe = pipe.index === DISCO_PIPE || pipe.index === EXIT_PIPE;
+    if (isPortalPipe) {
       cMain = "#c9cfdd"; cLight = "#eef2f8"; cDark = "#8b93a6";
     } else if (discoOn && pipe.index > DISCO_PIPE) {
       const NEON: [string, string, string][] = [
@@ -652,10 +659,10 @@ export function playFlappy(opts: FlappyOptions): void {
     cap(pipe.gapY + pipe.gap);
     body(pipe.gapY + pipe.gap + capH, FLOOR_Y - pipe.gapY - pipe.gap - capH);
 
-    // The portal: a skinny, glowing purple swirl filling the disco pipe's
-    // gap — layered outer glow, bright body, rotating darker swirl arcs,
-    // pale center. You fly through it into disco mode.
-    if (pipe.index === DISCO_PIPE) {
+    // The portal: a skinny, glowing purple swirl filling the portal
+    // pipe's gap — layered outer glow, bright body, rotating darker swirl
+    // arcs, pale center. Pipe 5 leads into disco mode, pipe 15 leads out.
+    if (isPortalPipe) {
       const pcx = x + w / 2;
       const pcy = pipe.gapY + pipe.gap / 2;
       const rx = w * 0.32;
@@ -698,8 +705,8 @@ export function playFlappy(opts: FlappyOptions): void {
       ctx.restore();
     }
 
-    // Mirror-ball glints wandering the disco pipe's faces.
-    if (pipe.index === DISCO_PIPE) {
+    // Mirror-ball glints wandering the portal pipes' faces.
+    if (isPortalPipe) {
       ctx.fillStyle = "#ffffff";
       const tphase = reducedMotion ? 0 : Math.floor(elapsed * 6);
       for (let i = 0; i < 8; i++) {
@@ -868,9 +875,9 @@ export function playFlappy(opts: FlappyOptions): void {
       ctx.textAlign = "left";
     }
 
-    // the drop: a quick white flash the instant disco mode hits
-    if (discoOn && discoAt >= 0 && elapsed - discoAt < 0.35 && !reducedMotion) {
-      ctx.globalAlpha = (1 - (elapsed - discoAt) / 0.35) * 0.75;
+    // the drop (and the exit): a quick white flash on each mode switch
+    if (modeFlashAt >= 0 && elapsed - modeFlashAt < 0.35 && !reducedMotion) {
+      ctx.globalAlpha = (1 - (elapsed - modeFlashAt) / 0.35) * 0.75;
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, W, H);
       ctx.globalAlpha = 1;
