@@ -425,20 +425,92 @@ export function playFlappy(opts: FlappyOptions): void {
     return margin + Math.random() * (FLOOR_Y - gap - margin * 2);
   };
 
+  // ——— disco soundtrack ———
+  // The club has a sound system. Music starts through the entry portal
+  // and fades out through the exit (or on death). Mobile browsers only
+  // unlock audio inside a real user gesture — and flying past a pipe
+  // isn't one — so the first tap primes the track muted, which unlocks
+  // playback for the portal later.
+  let music: HTMLAudioElement | null = null;
+  let musicFade = 0;
+  let musicPrimed = false;
+
+  const ensureMusic = () => {
+    if (!music) {
+      music = new Audio("/disco.mp3");
+      music.loop = true;
+      music.preload = "auto";
+    }
+    return music;
+  };
+
+  const primeMusic = () => {
+    if (musicPrimed) return;
+    musicPrimed = true;
+    const m = ensureMusic();
+    m.muted = true;
+    m.play()
+      .then(() => {
+        m.pause();
+        m.currentTime = 0;
+        m.muted = false;
+      })
+      .catch(() => {
+        // blocked — try again on the next gesture
+        m.muted = false;
+        musicPrimed = false;
+      });
+  };
+
+  const startMusic = () => {
+    const m = ensureMusic();
+    clearInterval(musicFade);
+    m.muted = false;
+    m.volume = 1;
+    m.currentTime = 0;
+    void m.play().catch(() => {}); // music is a bonus, never an error
+  };
+
+  const stopMusic = (fade: boolean) => {
+    const m = music;
+    clearInterval(musicFade);
+    if (!m || m.paused) return;
+    if (!fade) {
+      m.pause();
+      return;
+    }
+    musicFade = window.setInterval(() => {
+      m.volume = Math.max(0, m.volume - 0.07);
+      if (m.volume <= 0) {
+        clearInterval(musicFade);
+        m.pause();
+        m.volume = 1;
+      }
+    }, 45);
+  };
+
   const flap = () => {
     if (phase === "intro") return; // taps do nothing until Take flight
-    if (phase === "ready" || phase === "paused") phase = "playing";
+    primeMusic();
+    if (phase === "ready" || phase === "paused") {
+      if (phase === "paused" && discoOn) void music?.play().catch(() => {});
+      phase = "playing";
+    }
     if (phase === "playing") velocity = FLAP;
   };
 
   // An interruption mid-run (notification banner, incoming call, app
   // switch) pauses instead of letting the bird die off-screen.
   const pauseIfPlaying = () => {
-    if (phase === "playing") phase = "paused";
+    if (phase === "playing") {
+      phase = "paused";
+      if (discoOn) music?.pause();
+    }
   };
 
   const die = () => {
     phase = "dead";
+    stopMusic(true);
     setTimeout(showResult, 450);
   };
 
@@ -447,6 +519,7 @@ export function playFlappy(opts: FlappyOptions): void {
   let zeroRetryUsed = false;
 
   const restartRun = () => {
+    stopMusic(false);
     birdY = restY;
     velocity = 0;
     score = 0;
@@ -585,9 +658,11 @@ export function playFlappy(opts: FlappyOptions): void {
         if (pipe.index === DISCO_PIPE && !discoOn) {
           discoOn = true;
           modeFlashAt = elapsed;
+          startMusic();
         } else if (pipe.index === EXIT_PIPE && discoOn) {
           discoOn = false;
           modeFlashAt = elapsed;
+          stopMusic(true);
         }
       }
     }
@@ -975,6 +1050,8 @@ export function playFlappy(opts: FlappyOptions): void {
 
   const cleanup = () => {
     cancelAnimationFrame(raf);
+    clearInterval(musicFade);
+    music?.pause();
     stage.removeEventListener("pointerdown", onPointer);
     stage.removeEventListener("touchstart", onTouch);
     stage.removeEventListener("touchend", onTouch);
