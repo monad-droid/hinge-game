@@ -373,10 +373,10 @@ export function playFlappy(opts: FlappyOptions): void {
   let sparkles: { x: number; y: number; vx: number; vy: number; life: number; max: number; size: number; color: string }[] = [];
   let sparkleColorAt = 0;
   const emitSparkle = (burst: boolean) => {
-    if (reducedMotion || sparkles.length > 140) return;
+    if (reducedMotion || sparkles.length > 220) return;
     const tailX = BIRD_X - 4;
     const tailY = birdY + BIRD_SIZE * 0.62; // the business end
-    const n = burst ? 6 : 1;
+    const n = burst ? 9 : 2;
     for (let i = 0; i < n; i++) {
       const life = 0.45 + Math.random() * 0.4;
       sparkles.push({
