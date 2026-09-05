@@ -365,32 +365,16 @@ export function playFlappy(opts: FlappyOptions): void {
   let birdY = restY;
   let velocity = 0;
   let score = 0;
-  let pipes: { x: number; gapY: number; gap: number; counted: boolean; passedAt: number | null }[] = [];
-  // Rainbow sparkles out of the bird's rear: a steady dribble in flight,
-  // a proud burst per flap. Pixel squares, world-scrolled, fading out.
-  const SPARKLE_COLORS = ["#ff4d00", "#ffc233", "#74bf2e", "#2657e0", "#a04de0", "#ff7ab8", "#ffffff"];
+  let pipes: { x: number; gapY: number; gap: number; counted: boolean; passedAt: number | null; index: number }[] = [];
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let sparkles: { x: number; y: number; vx: number; vy: number; life: number; max: number; size: number; color: string }[] = [];
-  let sparkleColorAt = 0;
-  const emitSparkle = (burst: boolean) => {
-    if (reducedMotion || sparkles.length > 220) return;
-    const tailX = BIRD_X - 4;
-    const tailY = birdY + BIRD_SIZE * 0.62; // the business end
-    const n = burst ? 9 : 2;
-    for (let i = 0; i < n; i++) {
-      const life = 0.45 + Math.random() * 0.4;
-      sparkles.push({
-        x: tailX + (Math.random() - 0.5) * 4,
-        y: tailY + (Math.random() - 0.5) * 6,
-        vx: -(30 + Math.random() * 60) * u,
-        vy: (burst ? 60 : 20) * u * (Math.random() - 0.35),
-        life,
-        max: life,
-        size: (burst ? 3 : 2) + Math.random() * 3,
-        color: SPARKLE_COLORS[sparkleColorAt++ % SPARKLE_COLORS.length]!,
-      });
-    }
-  };
+  // ——— DISCO MODE ———
+  // The 5th pipe is the disco pipe (mirrored, glinting). Passing it drops
+  // the whole world into the club: dark sky, sweeping lights, a disco
+  // ball, neon pipes, and a flashing dance floor.
+  const DISCO_PIPE = 5;
+  let pipeIndex = 0;
+  let discoOn = false;
+  let discoAt = -1;
   let nextPipeX = W + 140;
   let scrollX = 0;
   let raf = 0;
@@ -405,10 +389,7 @@ export function playFlappy(opts: FlappyOptions): void {
   const flap = () => {
     if (phase === "intro") return; // taps do nothing until Take flight
     if (phase === "ready" || phase === "paused") phase = "playing";
-    if (phase === "playing") {
-      velocity = FLAP;
-      emitSparkle(true);
-    }
+    if (phase === "playing") velocity = FLAP;
   };
 
   // An interruption mid-run (notification banner, incoming call, app
@@ -431,6 +412,9 @@ export function playFlappy(opts: FlappyOptions): void {
     velocity = 0;
     score = 0;
     pipes = [];
+    pipeIndex = 0;
+    discoOn = false;
+    discoAt = -1;
     nextPipeX = W + 140;
     scrollX = 0;
     lastTime = 0;
@@ -526,14 +510,6 @@ export function playFlappy(opts: FlappyOptions): void {
   // ——— simulation ———
   const step = (dt: number) => {
     const speed = speedNow();
-    emitSparkle(false);
-    for (const sp of sparkles) {
-      sp.x += (sp.vx - speed) * dt;
-      sp.y += sp.vy * dt;
-      sp.vy += 260 * u * dt; // gentle fall
-      sp.life -= dt;
-    }
-    sparkles = sparkles.filter((sp) => sp.life > 0 && sp.x > -12);
     velocity += GRAVITY * dt;
     birdY += velocity * dt;
     scrollX += speed * dt;
@@ -553,7 +529,7 @@ export function playFlappy(opts: FlappyOptions): void {
     nextPipeX -= speed * dt;
     if (nextPipeX <= W) {
       const gap = gapNow();
-      pipes.push({ x: nextPipeX, gapY: spawnGapY(gap), gap, counted: false, passedAt: null });
+      pipes.push({ x: nextPipeX, gapY: spawnGapY(gap), gap, counted: false, passedAt: null, index: ++pipeIndex });
       nextPipeX += PIPE_SPACING;
     }
 
@@ -567,18 +543,22 @@ export function playFlappy(opts: FlappyOptions): void {
         pipe.counted = true;
         pipe.passedAt = elapsed; // kicks off the pass pop
         score++;
+        if (pipe.index === DISCO_PIPE && !discoOn) {
+          discoOn = true;
+          discoAt = elapsed;
+        }
       }
     }
   };
 
   // ——— rendering ———
-  const drawPipePair = (pipe: { x: number; gapY: number; gap: number; passedAt: number | null }) => {
+  const drawPipePair = (pipe: { x: number; gapY: number; gap: number; passedAt: number | null; index: number }) => {
     const capH = 26;
     // Pass pop: cleared pipes swell to a peak, settle slightly bigger, and
     // stay lit — permanently wider and lighter, a trail of conquests.
     const POP = 0.3;
-    const PEAK = 9;
-    const REST = 5;
+    const PEAK = 16;
+    const REST = 10;
     const popT = pipe.passedAt === null ? -1 : elapsed - pipe.passedAt;
     let bulge = 0;
     if (popT >= 0) {
@@ -590,26 +570,42 @@ export function playFlappy(opts: FlappyOptions): void {
     const x = pipe.x - bulge / 2;
     const w = PIPE_WIDTH + bulge;
 
+    // Palette: the disco pipe is mirrored silver; once the mode drops,
+    // later pipes go neon (hue cycling by index). Earlier pipes stay green.
+    let cMain: string = PIPE;
+    let cLight: string = PIPE_LIGHT;
+    let cDark: string = PIPE_DARK;
+    if (pipe.index === DISCO_PIPE) {
+      cMain = "#c9cfdd"; cLight = "#eef2f8"; cDark = "#8b93a6";
+    } else if (discoOn && pipe.index > DISCO_PIPE) {
+      const NEON: [string, string, string][] = [
+        ["#e438c4", "#ff86e3", "#96157e"],
+        ["#2ec9e0", "#8fe9f5", "#1a7f92"],
+        ["#f3b32a", "#ffe08a", "#a97a10"],
+      ];
+      [cMain, cLight, cDark] = NEON[pipe.index % NEON.length]!;
+    }
+
     const body = (top: number, height: number) => {
       if (height <= 0) return;
       ctx.fillStyle = OUTLINE;
       ctx.fillRect(x + 3, top, w - 6, height);
-      ctx.fillStyle = PIPE;
+      ctx.fillStyle = cMain;
       ctx.fillRect(x + 5, top, w - 10, height);
-      ctx.fillStyle = PIPE_LIGHT;
+      ctx.fillStyle = cLight;
       ctx.fillRect(x + 8, top, 7, height);
-      ctx.fillStyle = PIPE_DARK;
+      ctx.fillStyle = cDark;
       ctx.fillRect(x + w - 12, top, 5, height);
     };
 
     const cap = (top: number) => {
       ctx.fillStyle = OUTLINE;
       ctx.fillRect(x, top, w, capH);
-      ctx.fillStyle = PIPE;
+      ctx.fillStyle = cMain;
       ctx.fillRect(x + 2, top + 2, w - 4, capH - 4);
-      ctx.fillStyle = PIPE_LIGHT;
+      ctx.fillStyle = cLight;
       ctx.fillRect(x + 5, top + 2, 8, capH - 4);
-      ctx.fillStyle = PIPE_DARK;
+      ctx.fillStyle = cDark;
       ctx.fillRect(x + w - 10, top + 2, 5, capH - 4);
     };
 
@@ -620,10 +616,24 @@ export function playFlappy(opts: FlappyOptions): void {
     cap(pipe.gapY + pipe.gap);
     body(pipe.gapY + pipe.gap + capH, FLOOR_Y - pipe.gapY - pipe.gap - capH);
 
+    // Mirror-ball glints wandering the disco pipe's faces.
+    if (pipe.index === DISCO_PIPE) {
+      ctx.fillStyle = "#ffffff";
+      const tphase = reducedMotion ? 0 : Math.floor(elapsed * 6);
+      for (let i = 0; i < 8; i++) {
+        const hsh = ((i * 73 + tphase * 37) % 97) / 97;
+        const topH = Math.max(1, pipe.gapY - 20);
+        const botH = Math.max(1, FLOOR_Y - pipe.gapY - pipe.gap - 30);
+        const gy = i % 2 === 0 ? 6 + hsh * topH : pipe.gapY + pipe.gap + 10 + hsh * botH;
+        const gx = x + 6 + ((i * 29 + tphase * 13) % Math.max(1, Math.floor(w) - 14));
+        ctx.fillRect(gx, gy, 3, 3);
+      }
+    }
+
     if (popT >= 0) {
       // Lights up on pass, pulses brighter through the pop, then holds.
-      ctx.globalAlpha = Math.max(0.22, k * 0.4);
-      ctx.fillStyle = PIPE_LIGHT;
+      ctx.globalAlpha = Math.max(0.38, k * 0.55);
+      ctx.fillStyle = cLight;
       ctx.fillRect(x, 0, w, pipe.gapY);
       ctx.fillRect(x, pipe.gapY + pipe.gap, w, FLOOR_Y - pipe.gapY - pipe.gap);
       ctx.globalAlpha = 1;
@@ -631,45 +641,123 @@ export function playFlappy(opts: FlappyOptions): void {
   };
 
   const draw = () => {
-    // sky
-    ctx.fillStyle = SKY;
+    // sky — or the club, once the disco pipe has been passed
+    ctx.fillStyle = discoOn ? "#191231" : SKY;
     ctx.fillRect(0, 0, W, H);
 
-    // clouds, drifting slower than the world
-    ctx.fillStyle = CLOUD;
-    for (const cloud of clouds) {
-      const span = W + 200;
-      const cx = ((((cloud.x - scrollX * 0.25) % span) + span) % span) - 100;
+    if (!discoOn) {
+      // clouds, drifting slower than the world
+      ctx.fillStyle = CLOUD;
+      for (const cloud of clouds) {
+        const span = W + 200;
+        const cx = ((((cloud.x - scrollX * 0.25) % span) + span) % span) - 100;
+        ctx.beginPath();
+        ctx.arc(cx, cloud.y, cloud.r, 0, Math.PI * 2);
+        ctx.arc(cx + cloud.r * 0.9, cloud.y + 4, cloud.r * 0.75, 0, Math.PI * 2);
+        ctx.arc(cx - cloud.r * 0.9, cloud.y + 5, cloud.r * 0.7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else {
+      // club lights: three sweeping additive beams
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = 0.16;
+      const BEAMS: [number, string][] = [
+        [0.15, "#ff4fd8"],
+        [0.5, "#37d5f0"],
+        [0.85, "#ffd23f"],
+      ];
+      for (let i = 0; i < BEAMS.length; i++) {
+        const [fx, color] = BEAMS[i]!;
+        const sway = reducedMotion ? 0 : Math.sin(elapsed * 1.4 + i * 2.1) * 0.45;
+        ctx.save();
+        ctx.translate(W * fx, -6);
+        ctx.rotate(sway + (fx - 0.5) * 0.4);
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(-8, 0);
+        ctx.lineTo(8, 0);
+        ctx.lineTo(70, H);
+        ctx.lineTo(-70, H);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.restore();
+
+      // the disco ball
+      const bx = W / 2;
+      const by = 70;
+      const r = 24;
+      ctx.strokeStyle = "#8b93a6";
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(cx, cloud.y, cloud.r, 0, Math.PI * 2);
-      ctx.arc(cx + cloud.r * 0.9, cloud.y + 4, cloud.r * 0.75, 0, Math.PI * 2);
-      ctx.arc(cx - cloud.r * 0.9, cloud.y + 5, cloud.r * 0.7, 0, Math.PI * 2);
+      ctx.moveTo(bx, 0);
+      ctx.lineTo(bx, by - r);
+      ctx.stroke();
+      ctx.fillStyle = "#c9cfdd";
+      ctx.beginPath();
+      ctx.arc(bx, by, r, 0, Math.PI * 2);
       ctx.fill();
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(bx, by, r, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.strokeStyle = "rgba(139, 147, 166, 0.7)";
+      ctx.lineWidth = 1;
+      for (let gy = -r; gy <= r; gy += 8) {
+        ctx.beginPath();
+        ctx.moveTo(bx - r, by + gy);
+        ctx.lineTo(bx + r, by + gy);
+        ctx.stroke();
+      }
+      const spin = reducedMotion ? 0 : (elapsed * 30) % 16;
+      for (let gx = -r - 16; gx <= r; gx += 8) {
+        ctx.beginPath();
+        ctx.moveTo(bx + gx + spin, by - r);
+        ctx.lineTo(bx + gx + spin, by + r);
+        ctx.stroke();
+      }
+      ctx.fillStyle = "#ffffff";
+      const gl = Math.floor(elapsed * 5) % 4;
+      ctx.fillRect(bx - r + 6 + gl * 9, by - 8 + (gl % 2) * 10, 4, 4);
+      ctx.fillRect(bx + r - 10 - gl * 5, by + 2 - (gl % 2) * 12, 3, 3);
+      ctx.restore();
+      ctx.strokeStyle = OUTLINE;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(bx, by, r, 0, Math.PI * 2);
+      ctx.stroke();
     }
 
     for (const pipe of pipes) drawPipePair(pipe);
 
-    // ground: grass lip, then striped sand scrolling with the pipes
-    ctx.fillStyle = GRASS;
-    ctx.fillRect(0, FLOOR_Y, W, 7);
-    ctx.fillStyle = GRASS_EDGE;
-    ctx.fillRect(0, FLOOR_Y + 7, W, 3);
-    ctx.fillStyle = SAND;
-    ctx.fillRect(0, FLOOR_Y + 10, W, GROUND_H - 10);
-    ctx.fillStyle = SAND_STRIPE;
-    const stripeSpan = 26;
-    for (let sx = -stripeSpan + (-scrollX % stripeSpan); sx < W; sx += stripeSpan) {
-      ctx.fillRect(sx, FLOOR_Y + 10, 13, 9);
+    if (!discoOn) {
+      // ground: grass lip, then striped sand scrolling with the pipes
+      ctx.fillStyle = GRASS;
+      ctx.fillRect(0, FLOOR_Y, W, 7);
+      ctx.fillStyle = GRASS_EDGE;
+      ctx.fillRect(0, FLOOR_Y + 7, W, 3);
+      ctx.fillStyle = SAND;
+      ctx.fillRect(0, FLOOR_Y + 10, W, GROUND_H - 10);
+      ctx.fillStyle = SAND_STRIPE;
+      const stripeSpan = 26;
+      for (let sx = -stripeSpan + (-scrollX % stripeSpan); sx < W; sx += stripeSpan) {
+        ctx.fillRect(sx, FLOOR_Y + 10, 13, 9);
+      }
+    } else {
+      // dance floor: flashing tiles scrolling with the world
+      ctx.fillStyle = "#120c22";
+      ctx.fillRect(0, FLOOR_Y, W, 7);
+      const FLOOR_COLORS = ["#ff4fd8", "#37d5f0", "#ffd23f", "#9b5cf0"];
+      const ts = 26;
+      const beat = reducedMotion ? 0 : Math.floor(elapsed * 3);
+      const firstCol = Math.floor(scrollX / ts);
+      for (let ci = firstCol; ci <= firstCol + Math.ceil(W / ts) + 1; ci++) {
+        ctx.fillStyle = FLOOR_COLORS[(((ci % 4) + 4) % 4 + beat) % 4]!;
+        ctx.fillRect(ci * ts - scrollX, FLOOR_Y + 7, ts - 2, GROUND_H - 7);
+      }
     }
-
-    // sparkle trail, behind the bird
-    for (const sp of sparkles) {
-      ctx.globalAlpha = Math.max(0, sp.life / sp.max);
-      ctx.fillStyle = sp.color;
-      const px = Math.round(sp.size);
-      ctx.fillRect(Math.round(sp.x), Math.round(sp.y), px, px);
-    }
-    ctx.globalAlpha = 1;
 
     // bird: sprite frame by time, tilted with velocity (level while bobbing)
     const frame = birdFrames[Math.floor(elapsed / 0.09) % 3]!;
@@ -693,6 +781,14 @@ export function playFlappy(opts: FlappyOptions): void {
       ctx.fillStyle = "#ffffff";
       ctx.fillText(hint, W / 2, H * 0.62);
       ctx.textAlign = "left";
+    }
+
+    // the drop: a quick white flash the instant disco mode hits
+    if (discoOn && discoAt >= 0 && elapsed - discoAt < 0.35 && !reducedMotion) {
+      ctx.globalAlpha = (1 - (elapsed - discoAt) / 0.35) * 0.75;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = 1;
     }
 
     // arcade score
