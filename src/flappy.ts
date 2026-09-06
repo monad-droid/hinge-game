@@ -434,7 +434,6 @@ export function playFlappy(opts: FlappyOptions): void {
   let music: HTMLAudioElement | null = null;
   let musicFade = 0;
   let musicFadeEnd = 0;
-  let musicStartTimer = 0;
   let musicPrimed = false;
   // Web Audio gain path: iOS ignores volume (and muted) writes on audio
   // elements, so a real fade there means routing the element through an
@@ -517,32 +516,38 @@ export function playFlappy(opts: FlappyOptions): void {
     primePortalSfx();
   };
 
+  // Warm start: starting media playback costs a main-thread hitch (audio
+  // session/decoder spin-up — noticeable on iOS), so with the graph
+  // available, silent playback (gain 0) begins as the whoosh fires, ~¾s
+  // before the colors change. By the pass frame the decoder is already
+  // rolling and the audible start is just a gain flip + tiny seek.
+  const warmMusic = () => {
+    if (!audioCtx || !musicGain) return;
+    const m = ensureMusic();
+    if (!m.paused) return;
+    musicGain.gain.cancelScheduledValues(audioCtx.currentTime);
+    musicGain.gain.setValueAtTime(0, audioCtx.currentTime);
+    void m.play().catch(() => {});
+  };
+
   const startMusic = () => {
     const m = ensureMusic();
     clearInterval(musicFade);
-    clearTimeout(musicStartTimer);
-    // Deferred a beat: starting playback costs a main-thread hitch (audio
-    // session/decoder spin-up — noticeable on iOS), and the pass frame is
-    // already the most expensive one of the run, first club render plus
-    // mode flash. Landing the spin-up mid-flash hides the stutter.
-    musicStartTimer = window.setTimeout(() => {
-      m.muted = false;
-      m.volume = 1;
-      if (audioCtx && musicGain) {
-        void audioCtx.resume().catch(() => {});
-        musicGain.gain.cancelScheduledValues(audioCtx.currentTime);
-        musicGain.gain.setValueAtTime(1, audioCtx.currentTime);
-      }
-      if (m.currentTime > 0.05) m.currentTime = 0; // skip a redundant seek
-      void m.play().catch(() => {}); // music is a bonus, never an error
-    }, 150);
+    m.muted = false;
+    m.volume = 1;
+    if (audioCtx && musicGain) {
+      void audioCtx.resume().catch(() => {});
+      musicGain.gain.cancelScheduledValues(audioCtx.currentTime);
+      musicGain.gain.setValueAtTime(1, audioCtx.currentTime);
+    }
+    if (m.currentTime > 0.05) m.currentTime = 0; // restart the warmed-up track
+    void m.play().catch(() => {}); // music is a bonus, never an error
   };
 
   const stopMusic = (fade: boolean) => {
     const m = music;
     clearInterval(musicFade);
     clearTimeout(musicFadeEnd);
-    clearTimeout(musicStartTimer);
     if (!m || m.paused) return;
     if (!fade) {
       m.pause();
@@ -757,6 +762,7 @@ export function playFlappy(opts: FlappyOptions): void {
       if (!pipe.whooshed && isTransitionPortal && BIRD_X + BIRD_SIZE > pipe.x) {
         pipe.whooshed = true;
         playPortalSfx();
+        if (pipe.index === DISCO_PIPE) warmMusic();
       }
       if (!pipe.counted && pipe.x + PIPE_WIDTH < BIRD_X) {
         pipe.counted = true;
@@ -1159,7 +1165,6 @@ export function playFlappy(opts: FlappyOptions): void {
     cancelAnimationFrame(raf);
     clearInterval(musicFade);
     clearTimeout(musicFadeEnd);
-    clearTimeout(musicStartTimer);
     music?.pause();
     // Free the context — iOS caps how many can exist, and each game
     // screen builds its own.
