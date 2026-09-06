@@ -770,10 +770,35 @@ export function playFlappy(opts: FlappyOptions): void {
       [cMain, cLight, cDark] = NEON[pipe.index % NEON.length]!;
     }
 
+    // Portal pipes are built from mirror tiles, like a disco ball rolled
+    // into a column: a dark grout base with a grid of silver facets, a
+    // few of which catch the light and flash white as they shimmer.
+    const mirror = (rx: number, ry: number, rw: number, rh: number) => {
+      const ts = 9;
+      const SIL = ["#eef2f8", "#c9cfdd", "#aab2c4", "#98a0b2"];
+      const shimmer = reducedMotion ? 0 : Math.floor(elapsed * 5);
+      for (let ty = 0; ty * ts < rh; ty++) {
+        for (let tx = 0; tx * ts < rw; tx++) {
+          const glint = (tx * 53 + ty * 29 + shimmer) % 17 === 0;
+          const facet = ((tx * 73 + 7) * (ty * 31 + 13) + tx) % SIL.length;
+          ctx.fillStyle = glint ? "#ffffff" : SIL[facet]!;
+          const px = rx + tx * ts;
+          const py = ry + ty * ts;
+          ctx.fillRect(px, py, Math.min(ts - 1, rx + rw - px), Math.min(ts - 1, ry + rh - py));
+        }
+      }
+    };
+
     const body = (top: number, height: number) => {
       if (height <= 0) return;
       ctx.fillStyle = OUTLINE;
       ctx.fillRect(x + 3, top, w - 6, height);
+      if (isPortalPipe) {
+        ctx.fillStyle = "#6f7688"; // grout between the facets
+        ctx.fillRect(x + 5, top, w - 10, height);
+        mirror(x + 5, top, w - 10, height);
+        return;
+      }
       ctx.fillStyle = cMain;
       ctx.fillRect(x + 5, top, w - 10, height);
       ctx.fillStyle = cLight;
@@ -785,6 +810,12 @@ export function playFlappy(opts: FlappyOptions): void {
     const cap = (top: number) => {
       ctx.fillStyle = OUTLINE;
       ctx.fillRect(x, top, w, capH);
+      if (isPortalPipe) {
+        ctx.fillStyle = "#6f7688";
+        ctx.fillRect(x + 2, top + 2, w - 4, capH - 4);
+        mirror(x + 2, top + 2, w - 4, capH - 4);
+        return;
+      }
       ctx.fillStyle = cMain;
       ctx.fillRect(x + 2, top + 2, w - 4, capH - 4);
       ctx.fillStyle = cLight;
@@ -876,21 +907,6 @@ export function playFlappy(opts: FlappyOptions): void {
         }
       }
     }
-
-    // Mirror-ball glints wandering the portal pipes' faces.
-    if (isPortalPipe) {
-      ctx.fillStyle = "#ffffff";
-      const tphase = reducedMotion ? 0 : Math.floor(elapsed * 6);
-      for (let i = 0; i < 8; i++) {
-        const hsh = ((i * 73 + tphase * 37) % 97) / 97;
-        const topH = Math.max(1, pipe.gapY - 20);
-        const botH = Math.max(1, FLOOR_Y - pipe.gapY - pipe.gap - 30);
-        const gy = i % 2 === 0 ? 6 + hsh * topH : pipe.gapY + pipe.gap + 10 + hsh * botH;
-        const gx = x + 6 + ((i * 29 + tphase * 13) % Math.max(1, Math.floor(w) - 14));
-        ctx.fillRect(gx, gy, 3, 3);
-      }
-    }
-
 
     if (popT >= 0) {
       // Lights up on pass, pulses brighter through the pop, then holds.
