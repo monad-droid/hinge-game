@@ -401,7 +401,7 @@ export function playFlappy(opts: FlappyOptions): void {
   let birdY = restY;
   let velocity = 0;
   let score = 0;
-  let pipes: { x: number; gapY: number; gap: number; counted: boolean; passedAt: number | null; index: number }[] = [];
+  let pipes: { x: number; gapY: number; gap: number; counted: boolean; whooshed: boolean; passedAt: number | null; index: number }[] = [];
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   // ——— DISCO MODE ———
   // The very first pipe is the disco pipe (mirrored, glinting, portal in the
@@ -738,7 +738,7 @@ export function playFlappy(opts: FlappyOptions): void {
     nextPipeX -= speed * dt;
     if (nextPipeX <= W) {
       const gap = gapNow();
-      pipes.push({ x: nextPipeX, gapY: spawnGapY(gap), gap, counted: false, passedAt: null, index: ++pipeIndex });
+      pipes.push({ x: nextPipeX, gapY: spawnGapY(gap), gap, counted: false, whooshed: false, passedAt: null, index: ++pipeIndex });
       nextPipeX += PIPE_SPACING;
     }
 
@@ -748,6 +748,16 @@ export function playFlappy(opts: FlappyOptions): void {
         die();
         return;
       }
+      // The whoosh leads the transition: it fires as the bird's beak
+      // enters the swirl, ~¾s before the pass counts — so the sound plays
+      // through the portal, the flash lands on exit, and the music change
+      // comes clearly after.
+      const isTransitionPortal =
+        (pipe.index === DISCO_PIPE && !discoOn) || (pipe.index === EXIT_PIPE && discoOn);
+      if (!pipe.whooshed && isTransitionPortal && BIRD_X + BIRD_SIZE > pipe.x) {
+        pipe.whooshed = true;
+        playPortalSfx();
+      }
       if (!pipe.counted && pipe.x + PIPE_WIDTH < BIRD_X) {
         pipe.counted = true;
         pipe.passedAt = elapsed; // kicks off the pass pop
@@ -755,12 +765,10 @@ export function playFlappy(opts: FlappyOptions): void {
         if (pipe.index === DISCO_PIPE && !discoOn) {
           discoOn = true;
           modeFlashAt = elapsed;
-          playPortalSfx();
           startMusic();
         } else if (pipe.index === EXIT_PIPE && discoOn) {
           discoOn = false;
           modeFlashAt = elapsed;
-          playPortalSfx();
           stopMusic(true);
         }
       }
