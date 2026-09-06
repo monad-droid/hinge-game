@@ -425,42 +425,89 @@ export function playFlappy(opts: FlappyOptions): void {
     return margin + Math.random() * (FLOOR_Y - gap - margin * 2);
   };
 
-  // ——— disco soundtrack ———
-  // The club has a sound system. Music starts through the entry portal
-  // and fades out through the exit (or on death). Mobile browsers only
-  // unlock audio inside a real user gesture — and flying past a pipe
-  // isn't one — so the first tap primes the track muted, which unlocks
-  // playback for the portal later.
-  let music: HTMLAudioElement | null = null;
-  let musicFade = 0;
-  let musicFadeEnd = 0;
-  let musicPrimed = false;
-  // Web Audio gain path: iOS ignores volume (and muted) writes on audio
-  // elements, so a real fade there means routing the element through an
-  // AudioContext and ramping a GainNode — which iOS does respect. When
-  // the graph can't be built, the element-volume tick fade is the fallback.
+  // ——— audio: soundtrack + portal whoosh ———
+  // Everything plays through ONE AudioContext as decoded buffers — no
+  // media elements. iOS ignores volume and muted on <audio> and stutters
+  // on mid-playback seeks, while buffer sources start sample-accurately
+  // for free, so this sidesteps the whole class of quirks. Mobile
+  // browsers only unlock audio inside a real user gesture, so the first
+  // tap creates and resumes the context; the tracks decode in the
+  // background while the player clears the approach to the portal.
   let audioCtx: AudioContext | null = null;
   let musicGain: GainNode | null = null;
-  const FADE_S = 1.6;
-  // Portal whoosh: a short one-shot decoded into an AudioBuffer, played
-  // through the same context — buffer starts are effectively free, so the
-  // sound can fire on the pass frame itself without re-creating the
-  // main-thread hitch the deferred music start avoids.
+  let musicBuf: AudioBuffer | null = null;
+  let musicSrc: AudioBufferSourceNode | null = null;
+  let musicWanted = false;
   let portalBuf: AudioBuffer | null = null;
-  let portalData: Promise<ArrayBuffer> | null = null;
+  let audioPrimed = false;
+  const FADE_S = 1.6;
 
-  const primePortalSfx = () => {
-    if (!audioCtx || portalBuf) return;
+  const decodeInto = (url: string, assign: (b: AudioBuffer) => void) => {
     const ctx2 = audioCtx;
-    portalData ??= fetch("/portal.mp3").then((r) => r.arrayBuffer());
-    void portalData
-      .then((buf) => ctx2.decodeAudioData(buf.slice(0))) // slice: decode may detach
-      .then((b) => {
-        portalBuf = b;
-      })
-      .catch(() => {
-        portalData = null; // fetch/decode failed — retry on a later tap
-      });
+    if (!ctx2) return;
+    void fetch(url)
+      .then((r) => r.arrayBuffer())
+      .then((buf) => ctx2.decodeAudioData(buf))
+      .then(assign)
+      .catch(() => {}); // audio is a bonus — a failed decode just stays silent
+  };
+
+  const primeAudio = () => {
+    if (audioPrimed) return;
+    audioPrimed = true;
+    try {
+      if (window.AudioContext) {
+        audioCtx = new AudioContext();
+        musicGain = audioCtx.createGain();
+        musicGain.connect(audioCtx.destination);
+      }
+      void audioCtx?.resume().catch(() => {});
+    } catch {
+      audioCtx = null;
+      musicGain = null;
+    }
+    decodeInto("/disco.mp3", (b) => {
+      musicBuf = b;
+      if (musicWanted) startMusic(); // decoded late — join the party now
+    });
+    decodeInto("/portal.mp3", (b) => {
+      portalBuf = b;
+    });
+  };
+
+  const startMusic = () => {
+    musicWanted = true;
+    if (!audioCtx || !musicGain || !musicBuf || musicSrc) return;
+    void audioCtx.resume().catch(() => {});
+    const t = audioCtx.currentTime;
+    musicGain.gain.cancelScheduledValues(t);
+    musicGain.gain.setValueAtTime(1, t);
+    const src = audioCtx.createBufferSource();
+    src.buffer = musicBuf;
+    src.loop = true;
+    src.connect(musicGain);
+    src.start();
+    musicSrc = src;
+  };
+
+  const stopMusic = (fade: boolean) => {
+    musicWanted = false;
+    const src = musicSrc;
+    musicSrc = null;
+    if (!src || !audioCtx || !musicGain) return;
+    const t = audioCtx.currentTime;
+    musicGain.gain.cancelScheduledValues(t);
+    try {
+      if (!fade || audioCtx.state !== "running") {
+        src.stop();
+      } else {
+        musicGain.gain.setValueAtTime(musicGain.gain.value, t);
+        musicGain.gain.linearRampToValueAtTime(0.0001, t + FADE_S);
+        src.stop(t + FADE_S + 0.05);
+      }
+    } catch {
+      // an already-stopped source throws — nothing left to do
+    }
   };
 
   const playPortalSfx = () => {
@@ -478,124 +525,11 @@ export function playFlappy(opts: FlappyOptions): void {
     }
   };
 
-  const ensureMusic = () => {
-    if (!music) {
-      music = new Audio("/disco.mp3");
-      music.loop = true;
-      music.preload = "auto";
-    }
-    return music;
-  };
-
-  const primeMusic = () => {
-    // One synchronous play()+pause() inside a real tap marks the element
-    // user-activated so the portal can start it later. It must all stay
-    // synchronous: pausing from the play() promise leaks an audible blip —
-    // or, when that promise never settles, the whole track.
-    if (musicPrimed) return;
-    musicPrimed = true;
-    const m = ensureMusic();
-    try {
-      // The context also needs a user gesture to leave "suspended" on
-      // mobile — build and resume it here, inside the tap.
-      if (!audioCtx && window.AudioContext) {
-        audioCtx = new AudioContext();
-        const src = audioCtx.createMediaElementSource(m);
-        musicGain = audioCtx.createGain();
-        src.connect(musicGain);
-        musicGain.connect(audioCtx.destination);
-      }
-      void audioCtx?.resume().catch(() => {});
-    } catch {
-      audioCtx = null;
-      musicGain = null; // graph failed — element volume fallback takes over
-    }
-    m.play().catch(() => {}); // rejection (AbortError from the pause) is expected
-    m.pause();
-    m.currentTime = 0;
-    primePortalSfx();
-  };
-
-  // Warm start: starting media playback costs a main-thread hitch (audio
-  // session/decoder spin-up — noticeable on iOS), so with the graph
-  // available, silent playback (gain 0) begins as the whoosh fires, ~¾s
-  // before the colors change. By the pass frame the decoder is already
-  // rolling and the audible start is just a gain flip + tiny seek.
-  const warmMusic = () => {
-    if (!audioCtx || !musicGain) return;
-    const m = ensureMusic();
-    if (!m.paused) return;
-    musicGain.gain.cancelScheduledValues(audioCtx.currentTime);
-    musicGain.gain.setValueAtTime(0, audioCtx.currentTime);
-    void m.play().catch(() => {});
-  };
-
-  const startMusic = () => {
-    const m = ensureMusic();
-    clearInterval(musicFade);
-    m.muted = false;
-    m.volume = 1;
-    if (audioCtx && musicGain) {
-      void audioCtx.resume().catch(() => {});
-      musicGain.gain.cancelScheduledValues(audioCtx.currentTime);
-      musicGain.gain.setValueAtTime(1, audioCtx.currentTime);
-    }
-    if (m.currentTime > 0.05) m.currentTime = 0; // restart the warmed-up track
-    void m.play().catch(() => {}); // music is a bonus, never an error
-  };
-
-  const stopMusic = (fade: boolean) => {
-    const m = music;
-    clearInterval(musicFade);
-    clearTimeout(musicFadeEnd);
-    if (!m || m.paused) return;
-    if (!fade) {
-      m.pause();
-      return;
-    }
-    if (audioCtx && musicGain && audioCtx.state === "running") {
-      // The real fade: ramp the gain down, then pause once it's silent.
-      const t = audioCtx.currentTime;
-      const g = musicGain;
-      g.gain.cancelScheduledValues(t);
-      g.gain.setValueAtTime(g.gain.value, t);
-      g.gain.linearRampToValueAtTime(0.0001, t + FADE_S);
-      musicFadeEnd = window.setTimeout(() => m.pause(), FADE_S * 1000 + 100);
-      return;
-    }
-    // Element-volume fallback, tick-bounded: where volume writes are
-    // ignored (no graph, but an iOS-like element), the stop must never
-    // depend on the volume actually reaching zero — after the last tick,
-    // pause no matter what.
-    let ticks = 32;
-    musicFade = window.setInterval(() => {
-      ticks--;
-      try {
-        m.volume = Math.max(0, m.volume - 0.032);
-      } catch {
-        // some webviews throw on volume writes — the tick bound still stops
-      }
-      if (ticks <= 0 || m.volume <= 0) {
-        clearInterval(musicFade);
-        m.pause();
-        try {
-          m.volume = 1;
-        } catch {
-          // ditto
-        }
-      }
-    }, 50);
-  };
-
   const flap = () => {
     if (phase === "intro") return; // taps do nothing until Take flight
-    primeMusic();
+    primeAudio();
     if (phase === "ready" || phase === "paused") {
-      if (phase === "paused" && discoOn) {
-        // an iOS interruption can leave the context suspended too
-        void audioCtx?.resume().catch(() => {});
-        void music?.play().catch(() => {});
-      }
+      if (phase === "paused" && discoOn) void audioCtx?.resume().catch(() => {});
       phase = "playing";
     }
     if (phase === "playing") velocity = FLAP;
@@ -606,7 +540,9 @@ export function playFlappy(opts: FlappyOptions): void {
   const pauseIfPlaying = () => {
     if (phase === "playing") {
       phase = "paused";
-      if (discoOn) music?.pause();
+      // Suspending the context freezes the music mid-note; the resume in
+      // flap picks it back up exactly where it left off.
+      if (discoOn) void audioCtx?.suspend().catch(() => {});
     }
   };
 
@@ -762,7 +698,6 @@ export function playFlappy(opts: FlappyOptions): void {
       if (!pipe.whooshed && isTransitionPortal && BIRD_X + BIRD_SIZE > pipe.x) {
         pipe.whooshed = true;
         playPortalSfx();
-        if (pipe.index === DISCO_PIPE) warmMusic();
       }
       if (!pipe.counted && pipe.x + PIPE_WIDTH < BIRD_X) {
         pipe.counted = true;
@@ -1163,9 +1098,7 @@ export function playFlappy(opts: FlappyOptions): void {
 
   const cleanup = () => {
     cancelAnimationFrame(raf);
-    clearInterval(musicFade);
-    clearTimeout(musicFadeEnd);
-    music?.pause();
+    stopMusic(false);
     // Free the context — iOS caps how many can exist, and each game
     // screen builds its own.
     void audioCtx?.close().catch(() => {});
