@@ -775,7 +775,7 @@ export function playFlappy(opts: FlappyOptions): void {
     // few of which catch the light and flash white as they shimmer.
     const mirror = (rx: number, ry: number, rw: number, rh: number) => {
       const ts = 9;
-      const SIL = ["#eef2f8", "#c9cfdd", "#aab2c4", "#98a0b2"];
+      const SIL = ["#f7fafd", "#e2e8f2", "#cdd4e0", "#b9c1cf"];
       const shimmer = reducedMotion ? 0 : Math.floor(elapsed * 5);
       for (let ty = 0; ty * ts < rh; ty++) {
         for (let tx = 0; tx * ts < rw; tx++) {
@@ -794,7 +794,7 @@ export function playFlappy(opts: FlappyOptions): void {
       ctx.fillStyle = OUTLINE;
       ctx.fillRect(x + 3, top, w - 6, height);
       if (isPortalPipe) {
-        ctx.fillStyle = "#6f7688"; // grout between the facets
+        ctx.fillStyle = "#8a92a4"; // grout between the facets
         ctx.fillRect(x + 5, top, w - 10, height);
         mirror(x + 5, top, w - 10, height);
         return;
@@ -811,7 +811,7 @@ export function playFlappy(opts: FlappyOptions): void {
       ctx.fillStyle = OUTLINE;
       ctx.fillRect(x, top, w, capH);
       if (isPortalPipe) {
-        ctx.fillStyle = "#6f7688";
+        ctx.fillStyle = "#8a92a4";
         ctx.fillRect(x + 2, top + 2, w - 4, capH - 4);
         mirror(x + 2, top + 2, w - 4, capH - 4);
         return;
