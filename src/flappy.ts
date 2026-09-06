@@ -443,6 +443,41 @@ export function playFlappy(opts: FlappyOptions): void {
   let audioCtx: AudioContext | null = null;
   let musicGain: GainNode | null = null;
   const FADE_S = 1.6;
+  // Portal whoosh: a short one-shot decoded into an AudioBuffer, played
+  // through the same context — buffer starts are effectively free, so the
+  // sound can fire on the pass frame itself without re-creating the
+  // main-thread hitch the deferred music start avoids.
+  let portalBuf: AudioBuffer | null = null;
+  let portalData: Promise<ArrayBuffer> | null = null;
+
+  const primePortalSfx = () => {
+    if (!audioCtx || portalBuf) return;
+    const ctx2 = audioCtx;
+    portalData ??= fetch("/portal.mp3").then((r) => r.arrayBuffer());
+    void portalData
+      .then((buf) => ctx2.decodeAudioData(buf.slice(0))) // slice: decode may detach
+      .then((b) => {
+        portalBuf = b;
+      })
+      .catch(() => {
+        portalData = null; // fetch/decode failed — retry on a later tap
+      });
+  };
+
+  const playPortalSfx = () => {
+    if (!audioCtx || !portalBuf || audioCtx.state !== "running") return;
+    try {
+      const src = audioCtx.createBufferSource();
+      src.buffer = portalBuf;
+      const g = audioCtx.createGain();
+      g.gain.value = 0.85;
+      src.connect(g);
+      g.connect(audioCtx.destination);
+      src.start();
+    } catch {
+      // a missing whoosh is fine
+    }
+  };
 
   const ensureMusic = () => {
     if (!music) {
@@ -479,6 +514,7 @@ export function playFlappy(opts: FlappyOptions): void {
     m.play().catch(() => {}); // rejection (AbortError from the pause) is expected
     m.pause();
     m.currentTime = 0;
+    primePortalSfx();
   };
 
   const startMusic = () => {
@@ -719,10 +755,12 @@ export function playFlappy(opts: FlappyOptions): void {
         if (pipe.index === DISCO_PIPE && !discoOn) {
           discoOn = true;
           modeFlashAt = elapsed;
+          playPortalSfx();
           startMusic();
         } else if (pipe.index === EXIT_PIPE && discoOn) {
           discoOn = false;
           modeFlashAt = elapsed;
+          playPortalSfx();
           stopMusic(true);
         }
       }
