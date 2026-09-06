@@ -440,6 +440,12 @@ export function playFlappy(opts: FlappyOptions): void {
   let musicWanted = false;
   let portalBuf: AudioBuffer | null = null;
   let audioPrimed = false;
+  // iOS mutes Web-Audio-only output while the ring/silent switch is on —
+  // but media ELEMENT playback ignores the switch, and while any element
+  // is playing, the whole page (Web Audio included) sounds. This looping
+  // silent element exists purely to hold that "playback" session open, so
+  // the club works on the (very common) phone that's set to silent.
+  let sessionEl: HTMLAudioElement | null = null;
   const FADE_S = 1.6;
 
   const decodeInto = (url: string, assign: (b: AudioBuffer) => void) => {
@@ -455,6 +461,13 @@ export function playFlappy(opts: FlappyOptions): void {
   const primeAudio = () => {
     if (audioPrimed) return;
     audioPrimed = true;
+    try {
+      sessionEl = new Audio("/silence.mp3");
+      sessionEl.loop = true;
+      void sessionEl.play().catch(() => {});
+    } catch {
+      sessionEl = null;
+    }
     try {
       if (window.AudioContext) {
         audioCtx = new AudioContext();
@@ -529,7 +542,12 @@ export function playFlappy(opts: FlappyOptions): void {
     if (phase === "intro") return; // taps do nothing until Take flight
     primeAudio();
     if (phase === "ready" || phase === "paused") {
-      if (phase === "paused" && discoOn) void audioCtx?.resume().catch(() => {});
+      if (phase === "paused") {
+        // an interruption can pause the session holder and suspend the
+        // context — restart both
+        if (sessionEl?.paused) void sessionEl.play().catch(() => {});
+        if (discoOn) void audioCtx?.resume().catch(() => {});
+      }
       phase = "playing";
     }
     if (phase === "playing") velocity = FLAP;
@@ -1099,6 +1117,8 @@ export function playFlappy(opts: FlappyOptions): void {
   const cleanup = () => {
     cancelAnimationFrame(raf);
     stopMusic(false);
+    sessionEl?.pause();
+    sessionEl = null;
     // Free the context — iOS caps how many can exist, and each game
     // screen builds its own.
     void audioCtx?.close().catch(() => {});
