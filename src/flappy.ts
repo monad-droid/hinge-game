@@ -1107,15 +1107,19 @@ export function playFlappy(opts: FlappyOptions): void {
     // as glitter rather than blinking dots. Drawn inside the bird's
     // transform so the sparkle tilts with him.
     if (discoOn && !reducedMotion) {
-      const tw = Math.floor(elapsed * 8);
+      const tw = Math.floor(elapsed * 12);
       const s = SPRITE_H / 14; // one sprite cell
       for (let i = 0; i < SUIT_CELLS.length; i++) {
         const [sx, sy] = SUIT_CELLS[i]!;
-        const h = (sx * 31 + sy * 47 + tw * 13 + i * 7) % 7;
-        if (h > 1) continue;
-        ctx.fillStyle = h === 0 ? "#ffffff" : "#ffe9a8";
-        const ox = (sx * 7 + sy * 3 + tw) % 2;
-        const oy = (sx * 5 + sy * 11 + tw * 3) % 2;
+        // avalanche hash — a linear mix here makes marching stripes, not
+        // twinkle: neighbors and consecutive ticks must decorrelate
+        let n = (sx * 374761393 + sy * 668265263 + tw * 2246822519) | 0;
+        n = Math.imul(n ^ (n >>> 13), 1274126177);
+        n = (n ^ (n >>> 16)) >>> 0;
+        if (n % 7 > 1) continue;
+        ctx.fillStyle = (n >>> 7) % 5 === 0 ? "#ffe9a8" : "#ffffff";
+        const ox = (n >>> 3) % 2;
+        const oy = (n >>> 5) % 2;
         ctx.fillRect(-SPRITE_W / 2 + sx * s + ox, -SPRITE_H / 2 + sy * s + oy, 1, 1);
       }
     }
