@@ -922,9 +922,12 @@ export function playFlappy(opts: FlappyOptions): void {
       // with the beat, so the trail of cleared pipes throbs to the music.
       let washAlpha = Math.max(0.38, k * 0.55);
       if (popT >= POP && discoOn) {
-        const settle = Math.min(1, (popT - POP) / 0.8);
+        // a passed pipe only lives ~1s on screen, so the breathing starts
+        // right off the pop and swings hard — deep enough to read in the
+        // two or three beats before the pipe scrolls away
+        const settle = Math.min(1, (popT - POP) / 0.15);
         const fb = reducedMotion ? 0.5 : elapsed * 3;
-        const breathe = 0.12 + 0.2 * Math.pow(1 - (fb - Math.floor(fb)), 1.4);
+        const breathe = 0.1 + 0.38 * Math.pow(1 - (fb - Math.floor(fb)), 1.4);
         washAlpha = 0.38 * (1 - settle) + breathe * settle;
       }
       ctx.globalAlpha = washAlpha;
