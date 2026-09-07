@@ -51,12 +51,6 @@ export const PACKS: Record<string, Pack> = {
         choices: ["Give me an itinerary", "We’ll figure it out there"],
       },
       {
-        id: "when-to-meet",
-        topic: "First date timing",
-        prompt: "How soon after matching is a good time for a first date?",
-        choices: ["Within a week", "2–3 weeks"],
-      },
-      {
         id: "empty-day",
         topic: "A completely empty day",
         prompt: "You wake up with absolutely nothing to do.",
@@ -67,6 +61,12 @@ export const PACKS: Record<string, Pack> = {
         topic: "Birthday duration",
         prompt: "How long does your birthday last?",
         choices: ["One day", "Birthday week"],
+      },
+      {
+        id: "when-to-meet",
+        topic: "First date timing",
+        prompt: "How soon after matching is a good time for a first date?",
+        choices: ["Within a week", "2–3 weeks"],
       },
     ],
   },
