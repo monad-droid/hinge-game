@@ -916,21 +916,9 @@ export function playFlappy(opts: FlappyOptions): void {
       }
     }
 
-    // The lit wash. In the club it's the pipes' resting state: every neon
-    // pipe glows lit while it's still ahead of you; passing one pops it
-    // brighter, then the wash drains away and the pipe goes rich, solid
-    // neon — lit ahead, solid conquered. In daylight it works the old
-    // way: dark until passed, then lit and held.
-    let washAlpha = 0;
-    if (discoOn && pipe.index > DISCO_PIPE && !isPortalPipe) {
-      if (popT < 0) washAlpha = 0.38;
-      else if (popT < POP) washAlpha = Math.max(0.38, k * 0.55);
-      else washAlpha = Math.max(0, 0.38 * (1 - (popT - POP) / 0.45));
-    } else if (popT >= 0) {
-      washAlpha = Math.max(0.38, k * 0.55);
-    }
-    if (washAlpha > 0) {
-      ctx.globalAlpha = washAlpha;
+    if (popT >= 0) {
+      // Lights up on pass, pulses brighter through the pop, then holds.
+      ctx.globalAlpha = Math.max(0.38, k * 0.55);
       ctx.fillStyle = cLight;
       ctx.fillRect(x, 0, w, pipe.gapY);
       ctx.fillRect(x, pipe.gapY + pipe.gap, w, FLOOR_Y - pipe.gapY - pipe.gap);
