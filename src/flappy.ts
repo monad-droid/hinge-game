@@ -409,7 +409,7 @@ export function playFlappy(opts: FlappyOptions): void {
   let birdY = restY;
   let velocity = 0;
   let score = 0;
-  let pipes: { x: number; gapY: number; gap: number; counted: boolean; whooshed: boolean; passedAt: number | null; index: number }[] = [];
+  let pipes: { x: number; gapY: number; gap: number; counted: boolean; whooshed: boolean; passedAt: number | null; openedAt: number | null; index: number }[] = [];
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   // ——— DISCO MODE ———
   // The very first pipe is the disco pipe (mirrored, glinting, portal in the
@@ -705,11 +705,13 @@ export function playFlappy(opts: FlappyOptions): void {
     nextPipeX -= speed * dt;
     if (nextPipeX <= W) {
       const gap = gapNow();
-      pipes.push({ x: nextPipeX, gapY: spawnGapY(gap), gap, counted: false, whooshed: false, passedAt: null, index: ++pipeIndex });
+      pipes.push({ x: nextPipeX, gapY: spawnGapY(gap), gap, counted: false, whooshed: false, passedAt: null, openedAt: null, index: ++pipeIndex });
       nextPipeX += PIPE_SPACING;
     }
 
     for (const pipe of pipes) {
+      // portals bloom open once the pipe is fully in frame
+      if (pipe.openedAt === null && pipe.x + PIPE_WIDTH < W) pipe.openedAt = elapsed;
       const inX = BIRD_X + BIRD_SIZE > pipe.x + 4 && BIRD_X < pipe.x + PIPE_WIDTH - 4;
       if (inX && (birdY < pipe.gapY || birdY + BIRD_SIZE > pipe.gapY + pipe.gap)) {
         die();
@@ -743,7 +745,7 @@ export function playFlappy(opts: FlappyOptions): void {
   };
 
   // ——— rendering ———
-  const drawPipePair = (pipe: { x: number; gapY: number; gap: number; passedAt: number | null; index: number }) => {
+  const drawPipePair = (pipe: { x: number; gapY: number; gap: number; passedAt: number | null; openedAt: number | null; index: number }) => {
     const capH = 26;
     // Pass pop: cleared pipes swell to a peak, settle slightly bigger, and
     // stay lit — permanently wider and lighter, a trail of conquests.
@@ -842,19 +844,26 @@ export function playFlappy(opts: FlappyOptions): void {
     // The portal: a skinny, glowing purple swirl filling the portal
     // pipe's gap — layered outer glow, bright body, rotating darker swirl
     // arcs, pale center. Pipe 1 leads into disco mode, pipe 10 leads out.
-    // Once the bird is through, the portal collapses behind it: the swirl
-    // spins up, pinches to a point, and winks out with a spark.
+    // It BLOOMS open as the pipe comes into frame — spark, frantic spin,
+    // fast growth easing to full size — and once the bird is through it
+    // collapses the same way in reverse: spin-up, pinch to a point, spark.
     if (isPortalPipe) {
       const pcx = x + w / 2;
       const pcy = pipe.gapY + pipe.gap / 2;
       const COLLAPSE = 0.55;
+      const OPEN = 0.55;
       const ct = pipe.passedAt === null ? -1 : elapsed - pipe.passedAt;
       const cp = ct < 0 ? 0 : Math.min(1, ct / COLLAPSE); // 0 open → 1 shut
-      const scale = reducedMotion && ct >= 0 ? 0 : 1 - cp * cp; // slow start, fast pinch
+      const ot = pipe.openedAt === null ? -1 : elapsed - pipe.openedAt;
+      const op = ot < 0 ? 0 : Math.min(1, ot / OPEN); // 0 shut → 1 open
+      const closeScale = reducedMotion ? (ct >= 0 ? 0 : 1) : 1 - cp * cp; // slow start, fast pinch
+      const openScale = reducedMotion ? (ot >= 0 ? 1 : 0) : 1 - (1 - op) * (1 - op); // fast growth, soft landing
+      const scale = closeScale * openScale;
       if (scale > 0.02) {
         const rx = w * 0.32 * scale;
         const ry = (pipe.gap / 2 - 3) * scale;
-        const spin = elapsed * 2.4 + cp * cp * 22; // frantic as it shuts
+        // frantic while being born, frantic again as it shuts
+        const spin = elapsed * 2.4 + cp * cp * 22 + (1 - op) * (1 - op) * 22;
         const wob = (ph: number) => (reducedMotion ? 0 : Math.sin(elapsed * 3.1 + ph) * 2.5 * scale);
         ctx.save();
         // outer glow, layered (tightens with the collapse)
@@ -893,26 +902,27 @@ export function playFlappy(opts: FlappyOptions): void {
         ctx.fill();
         ctx.restore();
       }
-      // the wink-out spark, right as the pinch finishes
-      if (ct >= 0 && !reducedMotion) {
-        const st = ct - COLLAPSE * 0.8;
-        const SPARK = 0.25;
-        if (st >= 0 && st < SPARK) {
-          const fade = 1 - st / SPARK;
-          const len = 5 + (1 - fade) * 13;
-          ctx.save();
-          ctx.globalAlpha = fade;
-          ctx.strokeStyle = "#f2e4ff";
-          ctx.lineWidth = 2;
-          ctx.lineCap = "round";
-          ctx.beginPath();
-          ctx.moveTo(pcx - len, pcy);
-          ctx.lineTo(pcx + len, pcy);
-          ctx.moveTo(pcx, pcy - len * 0.6);
-          ctx.lineTo(pcx, pcy + len * 0.6);
-          ctx.stroke();
-          ctx.restore();
-        }
+      // the sparks: one igniting the bloom, one as the pinch finishes
+      const spark = (t: number, SPARK: number) => {
+        if (t < 0 || t >= SPARK) return;
+        const fade = 1 - t / SPARK;
+        const len = 5 + (1 - fade) * 13;
+        ctx.save();
+        ctx.globalAlpha = fade;
+        ctx.strokeStyle = "#f2e4ff";
+        ctx.lineWidth = 2;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(pcx - len, pcy);
+        ctx.lineTo(pcx + len, pcy);
+        ctx.moveTo(pcx, pcy - len * 0.6);
+        ctx.lineTo(pcx, pcy + len * 0.6);
+        ctx.stroke();
+        ctx.restore();
+      };
+      if (!reducedMotion) {
+        if (ot >= 0 && ct < 0) spark(ot, 0.22); // birth
+        if (ct >= 0) spark(ct - COLLAPSE * 0.8, 0.25); // death
       }
     }
 
