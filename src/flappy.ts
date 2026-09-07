@@ -1116,7 +1116,7 @@ export function playFlappy(opts: FlappyOptions): void {
         let n = (sx * 374761393 + sy * 668265263 + tw * 2246822519) | 0;
         n = Math.imul(n ^ (n >>> 13), 1274126177);
         n = (n ^ (n >>> 16)) >>> 0;
-        if (n % 7 > 1) continue;
+        if (n % 7 !== 0) continue; // ~1 in 7 cells lit — a subtler glitter
         ctx.fillStyle = (n >>> 7) % 5 === 0 ? "#ffe9a8" : "#ffffff";
         const ox = (n >>> 3) % 2;
         const oy = (n >>> 5) % 2;
