@@ -704,8 +704,12 @@ export function playFlappy(opts: FlappyOptions): void {
     pipes = pipes.filter((p) => p.x + PIPE_WIDTH > -10);
     nextPipeX -= speed * dt;
     if (nextPipeX <= W) {
-      const gap = gapNow();
-      pipes.push({ x: nextPipeX, gapY: spawnGapY(gap), gap, counted: false, whooshed: false, passedAt: null, openedAt: null, index: ++pipeIndex });
+      const idx = ++pipeIndex;
+      // portal pipes are doorways, not tests — their opening is wider
+      // than a regular pipe's (the swirl and mirror pipes size off the
+      // gap, so the door itself grows to match)
+      const gap = gapNow() * (idx === DISCO_PIPE || idx === EXIT_PIPE ? 1.22 : 1);
+      pipes.push({ x: nextPipeX, gapY: spawnGapY(gap), gap, counted: false, whooshed: false, passedAt: null, openedAt: null, index: idx });
       nextPipeX += PIPE_SPACING;
     }
 
