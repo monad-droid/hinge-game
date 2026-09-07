@@ -372,10 +372,10 @@ export function playFlappy(opts: FlappyOptions): void {
   const FLAP = -540 * u;
   // Difficulty ramps with score: the world speeds up and the gaps tighten,
   // so first-timers still clear a few pipes but 40+ takes actual skill.
-  const speedNow = () => (185 + Math.min(50, score) * 1.9) * u;
-  const gapNow = () => (162 - Math.min(45, score) * 1.3) * u;
+  const speedNow = () => (172 + Math.min(50, score) * 1.7) * u;
+  const gapNow = () => (174 - Math.min(45, score) * 1.1) * u;
   const PIPE_WIDTH = 62;
-  const PIPE_SPACING = 232;
+  const PIPE_SPACING = 248;
   const BIRD_SIZE = 26; // collision box; the sprite is drawn a bit larger
   const BIRD_X = Math.min(W * 0.3, 140);
   const GROUND_H = 48;
