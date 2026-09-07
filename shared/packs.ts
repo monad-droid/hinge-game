@@ -52,9 +52,9 @@ export const PACKS: Record<string, Pack> = {
       },
       {
         id: "when-to-meet",
-        topic: "When to actually meet",
-        prompt: "When a match is going well, when’s the best time to actually meet?",
-        choices: ["Within a week", "Give it a couple weeks"],
+        topic: "First date timing",
+        prompt: "How soon after matching is a good time for a first date?",
+        choices: ["Within a week", "2–3 weeks"],
       },
       {
         id: "empty-day",
