@@ -1107,12 +1107,19 @@ export function playFlappy(opts: FlappyOptions): void {
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(gx, FLOOR_Y + 7, ts - 2, GROUND_H - 7);
         ctx.globalAlpha = 1;
-        // the lit tile throws its light up into the room
-        const glow = ctx.createLinearGradient(0, FLOOR_Y - 30, 0, FLOOR_Y + 7);
+        // the lit tile pushes its light upward through the beat: a short
+        // beam climbs out of the tile bottom-to-top, brighter just behind
+        // its rising front, fading as the pulse dies
+        const frac = fb - beat;
+        const BEAM_H = 20;
+        const rise = Math.min(1, frac * 1.8);
+        const top = FLOOR_Y - BEAM_H * rise;
+        const glow = ctx.createLinearGradient(0, top, 0, FLOOR_Y + 7);
         glow.addColorStop(0, `rgba(${FLOOR_GLOWS[shade]!}, 0)`);
-        glow.addColorStop(1, `rgba(${FLOOR_GLOWS[shade]!}, ${(0.45 * pulse).toFixed(3)})`);
+        glow.addColorStop(0.35, `rgba(${FLOOR_GLOWS[shade]!}, ${(0.5 * pulse).toFixed(3)})`);
+        glow.addColorStop(1, `rgba(${FLOOR_GLOWS[shade]!}, ${(0.3 * pulse).toFixed(3)})`);
         ctx.fillStyle = glow;
-        ctx.fillRect(gx - 4, FLOOR_Y - 30, ts + 6, 37);
+        ctx.fillRect(gx - 2, top, ts + 2, FLOOR_Y + 7 - top);
       }
     }
 
