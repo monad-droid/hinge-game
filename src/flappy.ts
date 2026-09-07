@@ -385,6 +385,14 @@ export function playFlappy(opts: FlappyOptions): void {
 
   const birdFrames = makeBirdFrames(BIRD_MAP, WING_MAP);
   const discoFrames = makeBirdFrames(DISCO_BIRD_MAP, DISCO_WING_MAP);
+  // every suit-fabric cell of the disco sprite — the sequin field twinkles
+  // across these
+  const SUIT_CELLS: [number, number][] = [];
+  DISCO_BIRD_MAP.forEach((row, sy) => {
+    for (let sx = 0; sx < row.length; sx++) {
+      if (row[sx] === "P" || row[sx] === "V") SUIT_CELLS.push([sx, sy]);
+    }
+  });
   const clouds = [0.15, 0.45, 0.75].map((f, i) => ({
     x: W * f,
     y: H * (0.12 + 0.11 * i),
@@ -1093,6 +1101,24 @@ export function playFlappy(opts: FlappyOptions): void {
       ctx.rotate(Math.max(-0.4, Math.min(0.9, velocity / (900 * u))));
     }
     ctx.drawImage(frame, -SPRITE_W / 2, -SPRITE_H / 2, SPRITE_W, (SPRITE_H * frame.height) / 14);
+    // Sequins, Asendorf-style: a field of single 1px glints shimmering
+    // across the suit jacket — each frame a shifting ~third of the suit's
+    // cells light one tiny pixel at a jittered spot, so the fabric reads
+    // as glitter rather than blinking dots. Drawn inside the bird's
+    // transform so the sparkle tilts with him.
+    if (discoOn && !reducedMotion) {
+      const tw = Math.floor(elapsed * 8);
+      const s = SPRITE_H / 14; // one sprite cell
+      for (let i = 0; i < SUIT_CELLS.length; i++) {
+        const [sx, sy] = SUIT_CELLS[i]!;
+        const h = (sx * 31 + sy * 47 + tw * 13 + i * 7) % 7;
+        if (h > 1) continue;
+        ctx.fillStyle = h === 0 ? "#ffffff" : "#ffe9a8";
+        const ox = (sx * 7 + sy * 3 + tw) % 2;
+        const oy = (sx * 5 + sy * 11 + tw * 3) % 2;
+        ctx.fillRect(-SPRITE_W / 2 + sx * s + ox, -SPRITE_H / 2 + sy * s + oy, 1, 1);
+      }
+    }
     ctx.restore();
 
     // get-ready / paused hint
