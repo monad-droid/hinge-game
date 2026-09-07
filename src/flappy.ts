@@ -1080,16 +1080,39 @@ export function playFlappy(opts: FlappyOptions): void {
         ctx.fillRect(sx, FLOOR_Y + 10, 13, 9);
       }
     } else {
-      // dance floor: flashing tiles scrolling with the world
+      // dance floor: flashing tiles scrolling with the world. Each beat a
+      // hashed scatter of tiles blazes white and throws its color upward
+      // as a glow, dimming through the beat — the floor is its own light
+      // show. (Hashed, not linear: linear picks march instead of flash.)
       ctx.fillStyle = "#120c22";
       ctx.fillRect(0, FLOOR_Y, W, 7);
       const FLOOR_COLORS = ["#ff4fd8", "#37d5f0", "#ffd23f", "#9b5cf0"];
+      const FLOOR_GLOWS = ["255, 79, 216", "55, 213, 240", "255, 210, 63", "155, 92, 240"];
       const ts = 26;
-      const beat = reducedMotion ? 0 : Math.floor(elapsed * 3);
+      const fb = reducedMotion ? 0 : elapsed * 3;
+      const beat = Math.floor(fb);
+      const pulse = Math.pow(1 - (fb - beat), 0.6); // bright on the beat, easing off through it
       const firstCol = Math.floor(scrollX / ts);
       for (let ci = firstCol; ci <= firstCol + Math.ceil(W / ts) + 1; ci++) {
-        ctx.fillStyle = FLOOR_COLORS[(((ci % 4) + 4) % 4 + beat) % 4]!;
-        ctx.fillRect(ci * ts - scrollX, FLOOR_Y + 7, ts - 2, GROUND_H - 7);
+        const shade = ((((ci % 4) + 4) % 4) + beat) % 4;
+        const gx = ci * ts - scrollX;
+        ctx.fillStyle = FLOOR_COLORS[shade]!;
+        ctx.fillRect(gx, FLOOR_Y + 7, ts - 2, GROUND_H - 7);
+        if (reducedMotion) continue;
+        let n = (ci * 374761393 + beat * 668265263) | 0;
+        n = Math.imul(n ^ (n >>> 13), 1274126177);
+        n = (n ^ (n >>> 16)) >>> 0;
+        if (n % 4 !== 0) continue; // ~1 in 4 tiles lit per beat
+        ctx.globalAlpha = 0.2 + 0.5 * pulse;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(gx, FLOOR_Y + 7, ts - 2, GROUND_H - 7);
+        ctx.globalAlpha = 1;
+        // the lit tile throws its light up into the room
+        const glow = ctx.createLinearGradient(0, FLOOR_Y - 30, 0, FLOOR_Y + 7);
+        glow.addColorStop(0, `rgba(${FLOOR_GLOWS[shade]!}, 0)`);
+        glow.addColorStop(1, `rgba(${FLOOR_GLOWS[shade]!}, ${(0.45 * pulse).toFixed(3)})`);
+        ctx.fillStyle = glow;
+        ctx.fillRect(gx - 4, FLOOR_Y - 30, ts + 6, 37);
       }
     }
 
