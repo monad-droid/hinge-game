@@ -22,6 +22,57 @@ export interface Pack {
 
 export const PACKS: Record<string, Pack> = {
   // The live pack — what every new game is created from.
+  "original-v4": {
+    id: "original-v4",
+    name: "Original v4",
+    questions: [
+      {
+        id: "fries-milkshake",
+        topic: "Fries in a milkshake",
+        prompt: "Fries dipped in a milkshake.",
+        choices: ["Elite combination", "Food crime"],
+      },
+      {
+        id: "voice-note",
+        topic: "Three-minute voice notes",
+        prompt: "Someone sends you a 3-minute voice note.",
+        choices: ["Love it", "Call me at that point"],
+      },
+      {
+        id: "alarms",
+        topic: "Morning alarm strategy",
+        prompt: "How many alarms are acceptable in the morning?",
+        choices: ["One. Get up.", "However many it takes"],
+      },
+      {
+        id: "vacation-plan",
+        topic: "Vacation planning",
+        prompt: "On vacation, do you want a plan?",
+        choices: ["Give me an itinerary", "We’ll figure it out there"],
+      },
+      {
+        id: "when-to-meet",
+        topic: "When to actually meet",
+        prompt: "When a match is going well, when’s the best time to actually meet?",
+        choices: ["Within a week", "Give it a couple weeks"],
+      },
+      {
+        id: "empty-day",
+        topic: "A completely empty day",
+        prompt: "You wake up with absolutely nothing to do.",
+        choices: ["Make plans immediately", "Protect the empty day"],
+      },
+      {
+        id: "birthday",
+        topic: "Birthday duration",
+        prompt: "How long does your birthday last?",
+        choices: ["One day", "Birthday week"],
+      },
+    ],
+  },
+
+  // Frozen packs below: games already created against them render with
+  // them forever. Never edit these once games exist — add a new pack.
   "original-v3": {
     id: "original-v3",
     name: "Original v3",
@@ -71,8 +122,6 @@ export const PACKS: Record<string, Pack> = {
     ],
   },
 
-  // Frozen packs below: games already created against them render with
-  // them forever. Never edit these once games exist — add a new pack.
   "original-v2": {
     id: "original-v2",
     name: "Original v2",

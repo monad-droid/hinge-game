@@ -135,8 +135,8 @@ explicit submit-retry screen.
 **Config state**: predictions OFF (screens still in code; one-line
 re-enable), flappy ON, drawing OFF (parked for a future mode picker —
 all code kept in place; one-line re-enable via ENABLE_DRAWING). Live
-pack: original-v3 (fries/voice
-note/alarms/vacation/empty day/birthday/eating out). Reveal labels are
+pack: original-v4 (fries/voice note/alarms/vacation/when to actually
+meet/empty day/birthday). Reveal labels are
 always You/Them (stored role, else creator's perspective).
 
 **Known issues / soft spots**: drawing-round feel on real iPhones is

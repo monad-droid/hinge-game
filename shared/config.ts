@@ -24,7 +24,7 @@ export const ENABLE_DRAWING = false;
 // The question pack every new game is created from — the one live question
 // list. Existing games keep the pack they were created with, so bumping
 // this never rewrites an old game's reveal.
-export const CURRENT_PACK_ID = "original-v3";
+export const CURRENT_PACK_ID = "original-v4";
 
 export const QUESTIONS_PER_GAME = 7;
 
