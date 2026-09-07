@@ -969,10 +969,11 @@ export function playFlappy(opts: FlappyOptions): void {
       // entirely under reduced motion — no strobing for anyone who asked
       // the OS for calm — and alpha-capped so it dazzles, not blinds.
       if (!reducedMotion) {
+        // all hung in the top third, above the flight path
         const FLARES: { fx: number; fy: number; mid: string; off: number }[] = [
-          { fx: 0.22, fy: 0.3, mid: "rgba(255, 79, 216, 0.45)", off: 0 },
-          { fx: 0.76, fy: 0.18, mid: "rgba(55, 213, 240, 0.45)", off: 1 },
-          { fx: 0.5, fy: 0.46, mid: "rgba(255, 210, 63, 0.45)", off: 2 },
+          { fx: 0.22, fy: 0.24, mid: "rgba(255, 79, 216, 0.45)", off: 0 },
+          { fx: 0.76, fy: 0.1, mid: "rgba(55, 213, 240, 0.45)", off: 1 },
+          { fx: 0.5, fy: 0.18, mid: "rgba(255, 210, 63, 0.45)", off: 2 },
         ];
         const bt = elapsed * 3; // same beat clock as the dance floor
         const beat = Math.floor(bt);
@@ -984,7 +985,7 @@ export function playFlappy(opts: FlappyOptions): void {
           if ((beat + f.off) % 4 !== 0 || k <= 0) continue;
           const cx2 = W * f.fx;
           const cy2 = H * f.fy;
-          const r = 150 + k * 80;
+          const r = 120 + k * 60; // tighter bloom keeps the glow up top
           const grad = ctx.createRadialGradient(cx2, cy2, 0, cx2, cy2, r);
           grad.addColorStop(0, "rgba(255, 255, 255, 0.85)");
           grad.addColorStop(0.25, f.mid);
