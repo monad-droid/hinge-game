@@ -917,8 +917,17 @@ export function playFlappy(opts: FlappyOptions): void {
     }
 
     if (popT >= 0) {
-      // Lights up on pass, pulses brighter through the pop, then holds.
-      ctx.globalAlpha = Math.max(0.38, k * 0.55);
+      // Lights up on pass, pulses brighter through the pop, then holds —
+      // and in the club, the held wash settles into a glow that breathes
+      // with the beat, so the trail of cleared pipes throbs to the music.
+      let washAlpha = Math.max(0.38, k * 0.55);
+      if (popT >= POP && discoOn) {
+        const settle = Math.min(1, (popT - POP) / 0.8);
+        const fb = reducedMotion ? 0.5 : elapsed * 3;
+        const breathe = 0.12 + 0.2 * Math.pow(1 - (fb - Math.floor(fb)), 1.4);
+        washAlpha = 0.38 * (1 - settle) + breathe * settle;
+      }
+      ctx.globalAlpha = washAlpha;
       ctx.fillStyle = cLight;
       ctx.fillRect(x, 0, w, pipe.gapY);
       ctx.fillRect(x, pipe.gapY + pipe.gap, w, FLOOR_Y - pipe.gapY - pipe.gap);
