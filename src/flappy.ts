@@ -455,6 +455,10 @@ export function playFlappy(opts: FlappyOptions): void {
   // the club works on the (very common) phone that's set to silent.
   let sessionEl: HTMLAudioElement | null = null;
   const FADE_S = 1.6;
+  // Half volume, eased in: full-blast track exactly on the flash was a
+  // jump scare for anyone not expecting their phone to throw a party.
+  const MUSIC_VOL = 0.5;
+  const MUSIC_IN_S = 0.35;
 
   const decodeInto = (url: string, assign: (b: AudioBuffer) => void) => {
     const ctx2 = audioCtx;
@@ -502,7 +506,8 @@ export function playFlappy(opts: FlappyOptions): void {
     void audioCtx.resume().catch(() => {});
     const t = audioCtx.currentTime;
     musicGain.gain.cancelScheduledValues(t);
-    musicGain.gain.setValueAtTime(1, t);
+    musicGain.gain.setValueAtTime(0.0001, t);
+    musicGain.gain.linearRampToValueAtTime(MUSIC_VOL, t + MUSIC_IN_S);
     const src = audioCtx.createBufferSource();
     src.buffer = musicBuf;
     src.loop = true;
@@ -537,7 +542,7 @@ export function playFlappy(opts: FlappyOptions): void {
       const src = audioCtx.createBufferSource();
       src.buffer = portalBuf;
       const g = audioCtx.createGain();
-      g.gain.value = 0.85;
+      g.gain.value = 0.6;
       src.connect(g);
       g.connect(audioCtx.destination);
       src.start();
