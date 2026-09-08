@@ -303,6 +303,10 @@ export function playFlappy(opts: FlappyOptions): void {
           onpointerdown: (e: Event) => e.stopPropagation(),
           onclick: (e: Event) => {
             e.stopPropagation();
+            // Prime audio HERE, a gesture before the first flap: the
+            // context spin-up and the sfx fetch+decode ride the launch
+            // animation, so flap #1 already has its sound loaded.
+            primeAudio();
             const btn = e.currentTarget as HTMLButtonElement;
             btn.disabled = true;
             btn.classList.add("is-launching");
