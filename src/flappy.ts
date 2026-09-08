@@ -571,7 +571,9 @@ export function playFlappy(opts: FlappyOptions): void {
     }
     if (phase === "playing") {
       velocity = FLAP;
-      playOneShot(flapBuf, 0.3); // the wing fwip, soft — it fires a lot
+      // quiet on purpose: the fwip's real job is warning people the game
+      // has sound before the portal does it for them
+      playOneShot(flapBuf, 0.18);
     }
   };
 
