@@ -545,7 +545,12 @@ export function playFlappy(opts: FlappyOptions): void {
   };
 
   const playOneShot = (buf: AudioBuffer | null, vol: number) => {
-    if (!audioCtx || !buf || audioCtx.state !== "running") return;
+    if (!audioCtx || !buf) return;
+    // Never refuse on a suspended context: iOS can report "suspended" for
+    // a beat after the in-gesture resume (which silenced the first flap or
+    // two). Kick another resume and start the source anyway — a source
+    // started on a waking context plays the moment it's awake.
+    if (audioCtx.state !== "running") void audioCtx.resume().catch(() => {});
     try {
       const src = audioCtx.createBufferSource();
       src.buffer = buf;
