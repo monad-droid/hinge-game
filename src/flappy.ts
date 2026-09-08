@@ -573,7 +573,7 @@ export function playFlappy(opts: FlappyOptions): void {
       velocity = FLAP;
       // quiet on purpose: the fwip's real job is warning people the game
       // has sound before the portal does it for them
-      playOneShot(flapBuf, 0.07);
+      playOneShot(flapBuf, 0.025);
     }
   };
 
