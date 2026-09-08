@@ -555,7 +555,7 @@ export function playFlappy(opts: FlappyOptions): void {
     }
   };
 
-  const playPortalSfx = () => playOneShot(portalBuf, 0.24);
+  const playPortalSfx = () => playOneShot(portalBuf, 0.15);
 
   const flap = () => {
     if (phase === "intro") return; // taps do nothing until Take flight
@@ -573,7 +573,7 @@ export function playFlappy(opts: FlappyOptions): void {
       velocity = FLAP;
       // quiet on purpose: the fwip's real job is warning people the game
       // has sound before the portal does it for them
-      playOneShot(flapBuf, 0.008);
+      playOneShot(flapBuf, 0.015);
     }
   };
 
