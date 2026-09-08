@@ -457,7 +457,7 @@ export function playFlappy(opts: FlappyOptions): void {
   const FADE_S = 1.6;
   // Half volume, eased in: full-blast track exactly on the flash was a
   // jump scare for anyone not expecting their phone to throw a party.
-  const MUSIC_VOL = 0.2;
+  const MUSIC_VOL = 0.3;
   const MUSIC_IN_S = 0.35;
 
   const decodeInto = (url: string, assign: (b: AudioBuffer) => void) => {
@@ -542,7 +542,7 @@ export function playFlappy(opts: FlappyOptions): void {
       const src = audioCtx.createBufferSource();
       src.buffer = portalBuf;
       const g = audioCtx.createGain();
-      g.gain.value = 0.24;
+      g.gain.value = 0.36;
       src.connect(g);
       g.connect(audioCtx.destination);
       src.start();
