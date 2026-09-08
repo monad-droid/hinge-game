@@ -447,6 +447,7 @@ export function playFlappy(opts: FlappyOptions): void {
   let musicSrc: AudioBufferSourceNode | null = null;
   let musicWanted = false;
   let portalBuf: AudioBuffer | null = null;
+  let flapBuf: AudioBuffer | null = null;
   let audioPrimed = false;
   // iOS mutes Web-Audio-only output while the ring/silent switch is on —
   // but media ELEMENT playback ignores the switch, and while any element
@@ -498,6 +499,9 @@ export function playFlappy(opts: FlappyOptions): void {
     decodeInto("/portal.mp3", (b) => {
       portalBuf = b;
     });
+    decodeInto("/flap.mp3", (b) => {
+      flapBuf = b;
+    });
   };
 
   const startMusic = () => {
@@ -536,20 +540,22 @@ export function playFlappy(opts: FlappyOptions): void {
     }
   };
 
-  const playPortalSfx = () => {
-    if (!audioCtx || !portalBuf || audioCtx.state !== "running") return;
+  const playOneShot = (buf: AudioBuffer | null, vol: number) => {
+    if (!audioCtx || !buf || audioCtx.state !== "running") return;
     try {
       const src = audioCtx.createBufferSource();
-      src.buffer = portalBuf;
+      src.buffer = buf;
       const g = audioCtx.createGain();
-      g.gain.value = 0.24;
+      g.gain.value = vol;
       src.connect(g);
       g.connect(audioCtx.destination);
       src.start();
     } catch {
-      // a missing whoosh is fine
+      // a missing sound effect is fine
     }
   };
+
+  const playPortalSfx = () => playOneShot(portalBuf, 0.24);
 
   const flap = () => {
     if (phase === "intro") return; // taps do nothing until Take flight
@@ -563,7 +569,10 @@ export function playFlappy(opts: FlappyOptions): void {
       }
       phase = "playing";
     }
-    if (phase === "playing") velocity = FLAP;
+    if (phase === "playing") {
+      velocity = FLAP;
+      playOneShot(flapBuf, 0.3); // the wing fwip, soft — it fires a lot
+    }
   };
 
   // An interruption mid-run (notification banner, incoming call, app
