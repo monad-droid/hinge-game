@@ -416,13 +416,13 @@ export function playFlappy(opts: FlappyOptions): void {
   let pipes: { x: number; gapY: number; gap: number; counted: boolean; whooshed: boolean; passedAt: number | null; openedAt: number | null; index: number }[] = [];
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   // ——— DISCO MODE ———
-  // The very first pipe is the disco pipe (mirrored, glinting, portal in the
+  // The 5th pipe is the disco pipe (mirrored, glinting, portal in the
   // gap). Passing it drops the whole world into the club: dark sky,
   // sweeping lights, a disco ball, neon pipes, a flashing dance floor.
-  // Pipe 10 carries the exit portal — through it, the world goes back to
+  // Pipe 15 carries the exit portal — through it, the world goes back to
   // normal and stays that way for the rest of the run.
-  const DISCO_PIPE = 1;
-  const EXIT_PIPE = 10;
+  const DISCO_PIPE = 5;
+  const EXIT_PIPE = 15;
   let pipeIndex = 0;
   let discoOn = false;
   let modeFlashAt = -1;
@@ -872,7 +872,7 @@ export function playFlappy(opts: FlappyOptions): void {
 
     // The portal: a skinny, glowing purple swirl filling the portal
     // pipe's gap — layered outer glow, bright body, rotating darker swirl
-    // arcs, pale center. Pipe 1 leads into disco mode, pipe 10 leads out.
+    // arcs, pale center. Pipe 5 leads into disco mode, pipe 15 leads out.
     // It BLOOMS open as the pipe comes into frame — spark, frantic spin,
     // fast growth easing to full size — and once the bird is through it
     // collapses the same way in reverse: spin-up, pinch to a point, spark.
